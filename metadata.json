@@ -1,0 +1,6 @@
+{
+  "name": "APEX Strength",
+  "description": "Науково обґрунтований автономний застосунок для силових тренувань, мезоциклів, періодизації та прогресивного навантаження",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
