@@ -16,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -56,24 +57,24 @@ fun ProfileTab(viewModel: ApexViewModel) {
         state = listState,
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 20.dp),
+            .padding(horizontal = 16.dp),
         contentPadding = PaddingValues(top = 24.dp, bottom = 96.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(22.dp)
     ) {
         // 1. Page Title
         item(key = "profile_title_section") {
             Text(
                 text = "Профіль",
-                fontSize = 30.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.onBackground
+                style = ApexScreenTitle,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.padding(horizontal = 4.dp)
             )
         }
 
         // 2. User Profile Card
         item(key = "user_profile_card") {
             Card(
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                 modifier = Modifier
@@ -81,7 +82,7 @@ fun ProfileTab(viewModel: ApexViewModel) {
                     .testTag("user_profile_card")
             ) {
                 Row(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(18.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -90,17 +91,18 @@ fun ProfileTab(viewModel: ApexViewModel) {
                         modifier = Modifier.weight(1f)
                     ) {
                         Surface(
-                            shape = CircleShape,
+                            shape = RoundedCornerShape(18.dp),
                             color = IceCyanContainer,
-                            border = BorderStroke(1.5.dp, IceCyanPrimary.copy(alpha = 0.6f)),
-                            modifier = Modifier.size(48.dp)
+                            border = BorderStroke(1.dp, IceCyanContainerBorder),
+                            modifier = Modifier.size(56.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.Person,
-                                    contentDescription = null,
-                                    tint = IceCyanPrimary,
-                                    modifier = Modifier.size(24.dp)
+                                Text(
+                                    text = userNickname.trim().take(1).uppercase().ifEmpty { "А" },
+                                    fontFamily = Unbounded,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 22.sp,
+                                    color = IceCyanPrimary
                                 )
                             }
                         }
@@ -108,25 +110,25 @@ fun ProfileTab(viewModel: ApexViewModel) {
                         Column {
                             Text(
                                 text = userNickname,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 17.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 20.sp,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = "З нами з жовтня 2026",
-                                fontSize = 12.sp,
+                                fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
 
                     Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.background,
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                         modifier = Modifier
-                            .size(36.dp)
+                            .size(44.dp)
                             .clickable {
                                 nicknameInput = userNickname
                                 showEditNicknameDialog = true
@@ -138,7 +140,7 @@ fun ProfileTab(viewModel: ApexViewModel) {
                                 imageVector = Icons.Default.Edit,
                                 contentDescription = "Редагувати ім'я",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
@@ -151,14 +153,13 @@ fun ProfileTab(viewModel: ApexViewModel) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = "ТРЕНУВАННЯ",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = ApexSectionLabel,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    letterSpacing = 1.sp
+                    modifier = Modifier.padding(horizontal = 4.dp)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Card(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     modifier = Modifier
@@ -171,7 +172,8 @@ fun ProfileTab(viewModel: ApexViewModel) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { showManageExercisesModal = true }
-                                .padding(horizontal = 16.dp, vertical = 14.dp)
+                                .heightIn(min = 64.dp)
+                                .padding(horizontal = 14.dp, vertical = 12.dp)
                                 .testTag("open_manage_exercises_btn"),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
@@ -182,14 +184,14 @@ fun ProfileTab(viewModel: ApexViewModel) {
                             ) {
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant,
-                                    modifier = Modifier.size(38.dp)
+                                    color = IceCyanContainer,
+                                    modifier = Modifier.size(36.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
                                             imageVector = Icons.Default.MenuBook,
                                             contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            tint = IceCyanPrimary,
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
@@ -199,12 +201,12 @@ fun ProfileTab(viewModel: ApexViewModel) {
                                     Text(
                                         text = "База вправ",
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp,
+                                        fontSize = 15.sp,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
                                         text = "${allExercises.size} вправ у каталозі",
-                                        fontSize = 12.sp,
+                                        fontSize = 13.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
@@ -212,19 +214,23 @@ fun ProfileTab(viewModel: ApexViewModel) {
                             Icon(
                                 imageVector = Icons.Default.ChevronRight,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(18.dp)
+                                tint = TextMutedDark,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
 
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f))
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.padding(start = 62.dp)
+                        )
 
                         // Row 2: Фактори відновлення
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { showVolumeModal = true }
-                                .padding(horizontal = 16.dp, vertical = 14.dp)
+                                .heightIn(min = 64.dp)
+                                .padding(horizontal = 14.dp, vertical = 12.dp)
                                 .testTag("open_volume_settings_btn"),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
@@ -235,14 +241,14 @@ fun ProfileTab(viewModel: ApexViewModel) {
                             ) {
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant,
-                                    modifier = Modifier.size(38.dp)
+                                    color = IceCyanContainer,
+                                    modifier = Modifier.size(36.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
                                             imageVector = Icons.Default.Tune,
                                             contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            tint = IceCyanPrimary,
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
@@ -252,12 +258,12 @@ fun ProfileTab(viewModel: ApexViewModel) {
                                     Text(
                                         text = "Фактори відновлення",
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp,
+                                        fontSize = 15.sp,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
                                         text = "Сон, харчування, стрес, м'язи",
-                                        fontSize = 12.sp,
+                                        fontSize = 13.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
@@ -265,8 +271,8 @@ fun ProfileTab(viewModel: ApexViewModel) {
                             Icon(
                                 imageVector = Icons.Default.ChevronRight,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(18.dp)
+                                tint = TextMutedDark,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
@@ -279,14 +285,13 @@ fun ProfileTab(viewModel: ApexViewModel) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = "ЗВУКИ",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = ApexSectionLabel,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    letterSpacing = 1.sp
+                    modifier = Modifier.padding(horizontal = 4.dp)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Card(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     modifier = Modifier
@@ -299,7 +304,8 @@ fun ProfileTab(viewModel: ApexViewModel) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { showSetSoundDialog = true }
-                                .padding(horizontal = 16.dp, vertical = 14.dp)
+                                .heightIn(min = 64.dp)
+                                .padding(horizontal = 14.dp, vertical = 12.dp)
                                 .testTag("select_set_sound_profile_btn"),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
@@ -311,7 +317,7 @@ fun ProfileTab(viewModel: ApexViewModel) {
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
                                     color = WarningAmberContainer,
-                                    modifier = Modifier.size(38.dp)
+                                    modifier = Modifier.size(36.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
@@ -327,12 +333,12 @@ fun ProfileTab(viewModel: ApexViewModel) {
                                     Text(
                                         text = "Завершення підходу",
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp,
+                                        fontSize = 15.sp,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
                                         text = "${currentSetSound.titleUk} · ${currentSetSound.descriptionUk}",
-                                        fontSize = 12.sp,
+                                        fontSize = 13.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
@@ -340,19 +346,23 @@ fun ProfileTab(viewModel: ApexViewModel) {
                             Icon(
                                 imageVector = Icons.Default.ChevronRight,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(18.dp)
+                                tint = TextMutedDark,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
 
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f))
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.padding(start = 62.dp)
+                        )
 
                         // Row 2: Таймер відпочинку
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { showSoundDialog = true }
-                                .padding(horizontal = 16.dp, vertical = 14.dp)
+                                .heightIn(min = 64.dp)
+                                .padding(horizontal = 14.dp, vertical = 12.dp)
                                 .testTag("select_rest_sound_profile_btn"),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
@@ -364,7 +374,7 @@ fun ProfileTab(viewModel: ApexViewModel) {
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
                                     color = WarningAmberContainer,
-                                    modifier = Modifier.size(38.dp)
+                                    modifier = Modifier.size(36.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
@@ -380,12 +390,12 @@ fun ProfileTab(viewModel: ApexViewModel) {
                                     Text(
                                         text = "Таймер відпочинку",
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp,
+                                        fontSize = 15.sp,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
                                         text = "${currentSound.titleUk} · ${currentSound.descriptionUk}",
-                                        fontSize = 12.sp,
+                                        fontSize = 13.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
@@ -393,8 +403,8 @@ fun ProfileTab(viewModel: ApexViewModel) {
                             Icon(
                                 imageVector = Icons.Default.ChevronRight,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(18.dp)
+                                tint = TextMutedDark,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
@@ -408,14 +418,13 @@ fun ProfileTab(viewModel: ApexViewModel) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = "ТЕМА",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = ApexSectionLabel,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    letterSpacing = 1.sp
+                    modifier = Modifier.padding(horizontal = 4.dp)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Card(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     modifier = Modifier
@@ -425,30 +434,31 @@ fun ProfileTab(viewModel: ApexViewModel) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                            .heightIn(min = 64.dp)
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                modifier = Modifier.size(38.dp)
+                                color = if (isDark) Color(0xFF1B2330) else Color(0xFFFFF4D6),
+                                modifier = Modifier.size(36.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
-                                        imageVector = Icons.Default.DarkMode,
+                                        imageVector = if (isDark) Icons.Default.DarkMode else Icons.Default.LightMode,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        tint = if (isDark) Color(0xFFA5B4FC) else Color(0xFFD99A0B),
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
                             }
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                text = "Темна тема",
+                                text = if (isDark) "Темна тема" else "Світла тема",
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
+                                fontSize = 15.sp,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                         }
@@ -472,34 +482,49 @@ fun ProfileTab(viewModel: ApexViewModel) {
         // 6. Danger Zone: Reset All Progress
         item(key = "reset_progress_card") {
             Surface(
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(20.dp),
                 color = ErrorRedContainer,
                 border = BorderStroke(1.dp, ErrorRedBorder),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showResetConfirmDialog = true }
-                    .testTag("reset_all_progress_btn")
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 15.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.DeleteOutline,
-                        contentDescription = null,
-                        tint = ErrorRed,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Скинути весь прогрес",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
+                        text = "НЕБЕЗПЕЧНА ЗОНА",
+                        style = ApexSectionLabel,
                         color = ErrorRed
                     )
+                    Text(
+                        text = "Видалить усі тренування, підходи та налаштування без можливості відновлення.",
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedButton(
+                        onClick = { showResetConfirmDialog = true },
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.dp, ErrorRedStrongBorder),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = ErrorRed),
+                        modifier = Modifier
+                            .padding(top = 6.dp)
+                            .fillMaxWidth()
+                            .height(46.dp)
+                            .testTag("reset_all_progress_btn")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DeleteOutline,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Скинути весь прогрес",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
                 }
             }
         }

@@ -3,6 +3,7 @@ package com.example.ui.screens
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -17,10 +18,18 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
@@ -104,7 +113,7 @@ fun ActiveWorkoutScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             Surface(
-                color = MaterialTheme.colorScheme.background,
+                color = MaterialTheme.colorScheme.surfaceContainer,
                 tonalElevation = 0.dp
             ) {
                 Column(
@@ -115,7 +124,7 @@ fun ActiveWorkoutScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                            .padding(start = 16.dp, end = 12.dp, top = 14.dp, bottom = 14.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -134,7 +143,7 @@ fun ActiveWorkoutScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     text = currentSession?.title ?: "Силове тренування",
-                                    fontSize = 16.sp,
+                                    fontSize = 17.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = MaterialTheme.colorScheme.onBackground,
                                     maxLines = 1,
@@ -145,12 +154,12 @@ fun ActiveWorkoutScreen(
                                 Icon(
                                     imageVector = Icons.Default.Edit,
                                     contentDescription = "Змінити назву тренування",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(14.dp)
+                                    tint = TextMutedDark,
+                                    modifier = Modifier.size(15.dp)
                                 )
                             }
 
-                            Spacer(modifier = Modifier.height(3.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
 
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
@@ -162,13 +171,14 @@ fun ActiveWorkoutScreen(
                                 Spacer(modifier = Modifier.width(5.dp))
                                 Text(
                                     text = formatDuration(elapsedSeconds),
-                                    fontSize = 12.sp,
+                                    fontFamily = Unbounded,
+                                    fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = IceCyanPrimary
                                 )
                                 Text(
-                                    text = "  ·  $completedSetsCount з $totalWorkingSetsCount підх.  ·  ${liveTonnage.toInt()} кг",
-                                    fontSize = 12.sp,
+                                    text = "   $completedSetsCount з $totalWorkingSetsCount підх.   ${liveTonnage.toInt()} кг",
+                                    fontSize = 13.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
@@ -179,15 +189,16 @@ fun ActiveWorkoutScreen(
                         // Right: Music Icon Button, More Menu Button (⋮), and Finish Button (Завершити)
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             // Dedicated Music Button in Top Bar (User Decision 1)
                             Surface(
-                                shape = RoundedCornerShape(10.dp),
+                                shape = RoundedCornerShape(14.dp),
                                 color = MaterialTheme.colorScheme.surface,
                                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                                 modifier = Modifier
-                                    .size(36.dp)
+                                    .size(44.dp)
+                                    .clip(RoundedCornerShape(14.dp))
                                     .clickable { showMusicDialog = true }
                                     .testTag("open_yt_music_btn")
                             ) {
@@ -204,11 +215,11 @@ fun ActiveWorkoutScreen(
                             // More Menu Button (⋮)
                             Box {
                                 Surface(
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = MaterialTheme.colorScheme.surface,
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = Color.Transparent,
                                     modifier = Modifier
-                                        .size(36.dp)
+                                        .size(44.dp)
+                                        .clip(RoundedCornerShape(14.dp))
                                         .clickable { showMoreMenu = true }
                                         .testTag("active_workout_more_btn")
                                 ) {
@@ -216,8 +227,8 @@ fun ActiveWorkoutScreen(
                                         Icon(
                                             imageVector = Icons.Default.MoreVert,
                                             contentDescription = "Додаткові дії",
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.size(18.dp)
+                                            tint = SteelBlueOnContainer,
+                                            modifier = Modifier.size(20.dp)
                                         )
                                     }
                                 }
@@ -276,20 +287,20 @@ fun ActiveWorkoutScreen(
                                     )
                                     onFinishOrClose()
                                 },
-                                shape = RoundedCornerShape(10.dp),
+                                shape = RoundedCornerShape(14.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = IceCyanPrimary,
                                     contentColor = IceCyanOnPrimary
                                 ),
-                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
                                 modifier = Modifier
-                                    .height(36.dp)
+                                    .height(44.dp)
                                     .testTag("finish_workout_header_btn")
                             ) {
                                 Text(
                                     text = "Завершити",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 14.sp
                                 )
                             }
                         }
@@ -297,7 +308,7 @@ fun ActiveWorkoutScreen(
 
                     HorizontalDivider(
                         thickness = 1.dp,
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.outline
                     )
                 }
             }
@@ -339,8 +350,8 @@ fun ActiveWorkoutScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 14.dp, bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            contentPadding = PaddingValues(top = 14.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // 1. Reaction / Overload Warning Banner (matching Page 4 PDF)
             val firstReaction = activeStartReactions.firstOrNull()
@@ -459,12 +470,12 @@ fun ActiveWorkoutScreen(
 
             // 4. Dashed "+ Додати вправу" Button at Bottom
             item(key = "add_exercise_dashed_btn") {
-                val borderColor = MaterialTheme.colorScheme.outline
+                val borderColor = MaterialTheme.colorScheme.outlineVariant
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp)
-                        .clip(RoundedCornerShape(14.dp))
+                        .height(54.dp)
+                        .clip(RoundedCornerShape(18.dp))
                         .clickable { showAddExerciseDialog = true }
                         .testTag("add_custom_exercise_bottom_btn"),
                     contentAlignment = Alignment.Center
@@ -472,9 +483,9 @@ fun ActiveWorkoutScreen(
                     Canvas(modifier = Modifier.fillMaxSize()) {
                         drawRoundRect(
                             color = borderColor,
-                            cornerRadius = CornerRadius(14.dp.toPx(), 14.dp.toPx()),
+                            cornerRadius = CornerRadius(18.dp.toPx(), 18.dp.toPx()),
                             style = Stroke(
-                                width = 1.3.dp.toPx(),
+                                width = 1.5.dp.toPx(),
                                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f, 10f), 0f)
                             )
                         )
@@ -483,15 +494,15 @@ fun ActiveWorkoutScreen(
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            tint = IceCyanPrimary,
                             modifier = Modifier.size(18.dp)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Додати вправу",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -688,60 +699,55 @@ private fun VolumeOverloadWarningBanner(
     onDismiss: () -> Unit
 ) {
     Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = Color(0xFF1A140E),
-        border = BorderStroke(1.dp, Color(0xFF493516)),
+        shape = RoundedCornerShape(16.dp),
+        color = WarningAmberContainer,
+        border = BorderStroke(1.dp, WarningAmberBorder),
         modifier = Modifier
             .fillMaxWidth()
             .testTag("start_reaction_banner")
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 14.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.Top,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
                 modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = WarningAmberContainer,
-                    modifier = Modifier.size(34.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.TrendingUp,
-                            contentDescription = null,
-                            tint = WarningAmber,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.width(10.dp))
+                Icon(
+                    imageVector = Icons.Default.TrendingUp,
+                    contentDescription = null,
+                    tint = WarningAmber,
+                    modifier = Modifier
+                        .padding(top = 1.dp)
+                        .size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
                         text = title,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = WarningAmber
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = WarningAmberLight
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = subtitle,
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp,
+                        color = Color(0xFFC9B49E)
                     )
                 }
             }
             IconButton(
                 onClick = onDismiss,
-                modifier = Modifier.size(26.dp)
+                modifier = Modifier.size(36.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "Закрити",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    contentDescription = "Закрити попередження",
+                    tint = Color(0xFFA08B74),
                     modifier = Modifier.size(16.dp)
                 )
             }
@@ -778,14 +784,14 @@ fun ExerciseWorkoutCard(
     }
 
     Card(
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         modifier = Modifier
             .fillMaxWidth()
             .testTag("exercise_card_$exerciseName")
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 16.dp, bottom = 10.dp)) {
             // 1. Exercise Title + "..." Menu
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -794,7 +800,7 @@ fun ExerciseWorkoutCard(
             ) {
                 Text(
                     text = exerciseName,
-                    fontSize = 18.sp,
+                    fontSize = 19.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
@@ -802,10 +808,11 @@ fun ExerciseWorkoutCard(
 
                 Box {
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color.Transparent,
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
                             .clickable { menuExpanded = true }
                             .testTag("exercise_menu_btn_$exerciseName")
                     ) {
@@ -814,7 +821,7 @@ fun ExerciseWorkoutCard(
                                 imageVector = Icons.Default.MoreHoriz,
                                 contentDescription = "Меню вправи",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
@@ -862,15 +869,15 @@ fun ExerciseWorkoutCard(
             // 2. Badges Row (Muscle Group + Session Status)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Surface(
-                    shape = RoundedCornerShape(6.dp),
+                    shape = RoundedCornerShape(8.dp),
                     color = IceCyanContainer
                 ) {
                     Text(
                         text = muscleTitleUk,
-                        fontSize = 11.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = IceCyanPrimary,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
                     )
                 }
 
@@ -882,15 +889,15 @@ fun ExerciseWorkoutCard(
                     else -> "Перша сесія"
                 }
                 Surface(
-                    shape = RoundedCornerShape(6.dp),
+                    shape = RoundedCornerShape(8.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant
                 ) {
                     Text(
                         text = statusLabel,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = SteelBlueOnContainer,
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
                     )
                 }
             }
@@ -903,50 +910,48 @@ fun ExerciseWorkoutCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Surface(
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(12.dp),
                     color = MaterialTheme.colorScheme.background,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
                         Text(
                             text = "ЦІЛЬ",
-                            fontSize = 9.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            letterSpacing = 0.8.sp
+                            color = TextMutedDark,
+                            letterSpacing = 0.6.sp
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = "${sets.size}–${(sets.size + 1).coerceAtMost(5)} × $repsMin–$repsMax",
                             fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
 
                 Surface(
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(12.dp),
                     color = MaterialTheme.colorScheme.background,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     modifier = Modifier
                         .weight(1f)
                         .clickable { onOpenRirInfo() }
                 ) {
-                    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
                         Text(
                             text = "ЗАПАС",
-                            fontSize = 9.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            letterSpacing = 0.8.sp
+                            color = TextMutedDark,
+                            letterSpacing = 0.6.sp
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = "RIR 1–2",
                             fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.ExtraBold,
                             color = WarningAmber
                         )
                     }
@@ -958,30 +963,25 @@ fun ExerciseWorkoutCard(
             // 4. Tip / Advice Box with Lightbulb
             val tipText = advice?.explanationUk
                 ?: "Перша сесія. Почніть з комфортної ваги на $repsMin–$repsMax повторів."
-            Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = MaterialTheme.colorScheme.background,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                modifier = Modifier.fillMaxWidth()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Lightbulb,
-                        contentDescription = null,
-                        tint = WarningAmber,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = tipText,
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        lineHeight = 16.sp
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Outlined.Lightbulb,
+                    contentDescription = null,
+                    tint = IceCyanPrimary,
+                    modifier = Modifier
+                        .padding(top = 2.dp)
+                        .size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = tipText,
+                    fontSize = 13.sp,
+                    color = if (apexIsDark()) Color(0xFF9FB0B6) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 19.sp
+                )
             }
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -990,41 +990,46 @@ fun ExerciseWorkoutCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                    .padding(horizontal = 4.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = "СЕТ",
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = TextMutedDark,
+                    letterSpacing = 0.5.sp,
+                    textAlign = TextAlign.Center,
                     modifier = Modifier.width(38.dp)
                 )
                 Text(
                     text = "КГ",
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = TextMutedDark,
+                    letterSpacing = 0.5.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.weight(1f)
                 )
                 Text(
                     text = "ПОВТ.",
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = TextMutedDark,
+                    letterSpacing = 0.5.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.weight(1f)
                 )
                 Text(
                     text = "RIR",
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = TextMutedDark,
+                    letterSpacing = 0.5.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.width(56.dp)
                 )
-                Spacer(modifier = Modifier.width(42.dp))
+                Spacer(modifier = Modifier.width(44.dp))
             }
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -1046,16 +1051,16 @@ fun ExerciseWorkoutCard(
 
             // 7. "+ Додати підхід" Row Button
             Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = MaterialTheme.colorScheme.background,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                shape = RoundedCornerShape(12.dp),
+                color = Color.Transparent,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
                     .clickable { onAddSet() }
                     .testTag("add_set_btn_$exerciseName")
             ) {
                 Row(
-                    modifier = Modifier.padding(vertical = 10.dp),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -1063,12 +1068,12 @@ fun ExerciseWorkoutCard(
                         imageVector = Icons.Default.Add,
                         contentDescription = null,
                         tint = IceCyanPrimary,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "Додати підхід",
-                        fontSize = 12.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = IceCyanPrimary
                     )
@@ -1095,50 +1100,54 @@ private fun ExerciseSetRow(
     var rirValue by remember(set.id, set.rir) { mutableStateOf(set.rir) }
     var showRirMenu by remember { mutableStateOf(false) }
 
+    val rowShape = RoundedCornerShape(14.dp)
     val rowBgColor = when {
-        set.isCompleted -> IceCyanContainer.copy(alpha = 0.45f)
-        isCurrentTarget -> MaterialTheme.colorScheme.surfaceVariant
-        else -> MaterialTheme.colorScheme.background
+        set.isCompleted -> MaterialTheme.colorScheme.primaryContainer
+        isCurrentTarget -> MaterialTheme.colorScheme.background
+        else -> Color.Transparent
     }
-    val rowBorderColor = when {
-        set.isCompleted -> IceCyanPrimary.copy(alpha = 0.35f)
-        isCurrentTarget -> IceCyanPrimary
-        else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
-    }
+    val inputTextColor = if (set.isCompleted) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(rowShape)
             .background(rowBgColor)
-            .padding(horizontal = 8.dp, vertical = 7.dp)
+            .then(
+                if (isCurrentTarget && !set.isCompleted) {
+                    Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, rowShape)
+                } else {
+                    Modifier
+                }
+            )
+            .padding(horizontal = 4.dp, vertical = 6.dp)
             .testTag("set_row_${set.id}"),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Set Number Badge (long-press or tap menu not needed, keep clean)
+        // Set Number Badge
         Box(
             modifier = Modifier.width(38.dp),
-            contentAlignment = Alignment.CenterStart
+            contentAlignment = Alignment.Center
         ) {
             Surface(
-                shape = RoundedCornerShape(7.dp),
+                shape = RoundedCornerShape(9.dp),
                 color = when {
-                    set.isCompleted -> IceCyanPrimary.copy(alpha = 0.2f)
-                    isCurrentTarget -> IceCyanContainer
-                    else -> MaterialTheme.colorScheme.surface
+                    set.isCompleted -> IceCyanPrimary
+                    isCurrentTarget -> MaterialTheme.colorScheme.onSurface
+                    else -> MaterialTheme.colorScheme.surfaceVariant
                 },
-                border = BorderStroke(
-                    1.dp,
-                    if (isCurrentTarget && !set.isCompleted) IceCyanPrimary else rowBorderColor
-                ),
-                modifier = Modifier.size(26.dp)
+                modifier = Modifier.size(30.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         text = "${set.setNumber}",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (set.isCompleted || isCurrentTarget) IceCyanPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = when {
+                            set.isCompleted -> IceCyanOnPrimary
+                            isCurrentTarget -> MaterialTheme.colorScheme.background
+                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                        }
                     )
                 }
             }
@@ -1151,15 +1160,15 @@ private fun ExerciseSetRow(
                 .padding(horizontal = 4.dp),
             contentAlignment = Alignment.Center
         ) {
-            val fieldBg = if (set.isCompleted) Color.Transparent else MaterialTheme.colorScheme.background
-            val fieldBorder = if (set.isCompleted) Color.Transparent else MaterialTheme.colorScheme.outline
+            val fieldBg = if (set.isCompleted) Color.Transparent else MaterialTheme.colorScheme.surface
+            val fieldBorder = if (set.isCompleted) Color.Transparent else MaterialTheme.colorScheme.outlineVariant
             Surface(
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(10.dp),
                 color = fieldBg,
                 border = if (fieldBorder != Color.Transparent) BorderStroke(1.dp, fieldBorder) else null,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(34.dp)
+                    .height(44.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     BasicTextField(
@@ -1177,10 +1186,11 @@ private fun ExerciseSetRow(
                         ),
                         cursorBrush = SolidColor(IceCyanPrimary),
                         textStyle = TextStyle(
-                            fontSize = 14.sp,
+                            fontFamily = Manrope,
+                            fontSize = 17.sp,
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = inputTextColor
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1197,15 +1207,15 @@ private fun ExerciseSetRow(
                 .padding(horizontal = 4.dp),
             contentAlignment = Alignment.Center
         ) {
-            val fieldBg = if (set.isCompleted) Color.Transparent else MaterialTheme.colorScheme.background
-            val fieldBorder = if (set.isCompleted) Color.Transparent else MaterialTheme.colorScheme.outline
+            val fieldBg = if (set.isCompleted) Color.Transparent else MaterialTheme.colorScheme.surface
+            val fieldBorder = if (set.isCompleted) Color.Transparent else MaterialTheme.colorScheme.outlineVariant
             Surface(
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(10.dp),
                 color = fieldBg,
                 border = if (fieldBorder != Color.Transparent) BorderStroke(1.dp, fieldBorder) else null,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(34.dp)
+                    .height(44.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     BasicTextField(
@@ -1224,10 +1234,11 @@ private fun ExerciseSetRow(
                         keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
                         cursorBrush = SolidColor(IceCyanPrimary),
                         textStyle = TextStyle(
-                            fontSize = 14.sp,
+                            fontFamily = Manrope,
+                            fontSize = 17.sp,
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = inputTextColor
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1243,19 +1254,25 @@ private fun ExerciseSetRow(
             contentAlignment = Alignment.Center
         ) {
             Surface(
-                shape = RoundedCornerShape(7.dp),
+                shape = RoundedCornerShape(10.dp),
                 color = WarningAmberContainer,
+                border = BorderStroke(1.dp, WarningAmberBorder),
                 modifier = Modifier
+                    .padding(horizontal = 4.dp)
+                    .fillMaxWidth()
+                    .height(40.dp)
+                    .clip(RoundedCornerShape(10.dp))
                     .clickable { showRirMenu = true }
                     .testTag("rir_selector_${set.id}")
             ) {
-                Text(
-                    text = "$rirValue",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = WarningAmber,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                )
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "$rirValue",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = WarningAmberLight
+                    )
+                }
             }
             DropdownMenu(
                 expanded = showRirMenu,
@@ -1289,15 +1306,16 @@ private fun ExerciseSetRow(
 
         // Complete Checkmark Square Button
         Box(
-            modifier = Modifier.width(42.dp),
+            modifier = Modifier.width(44.dp),
             contentAlignment = Alignment.CenterEnd
         ) {
             Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = if (set.isCompleted) IceCyanPrimary else MaterialTheme.colorScheme.surfaceVariant,
-                border = if (!set.isCompleted) BorderStroke(1.dp, MaterialTheme.colorScheme.outline) else null,
+                shape = RoundedCornerShape(12.dp),
+                color = if (set.isCompleted) IceCyanPrimary else Color.Transparent,
+                border = if (!set.isCompleted) BorderStroke(1.5.dp, Color(0xFF33434B)) else null,
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
                     .clickable {
                         val w = weightText.toDoubleOrNull() ?: set.weightKg
                         val r = repsText.toIntOrNull() ?: set.reps
@@ -1308,9 +1326,9 @@ private fun ExerciseSetRow(
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Default.Check,
-                        contentDescription = "Виконано",
-                        tint = if (set.isCompleted) IceCyanOnPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp)
+                        contentDescription = if (set.isCompleted) "Скасувати підхід ${set.setNumber}" else "Позначити підхід ${set.setNumber} виконаним",
+                        tint = if (set.isCompleted) IceCyanOnPrimary else Color(0xFF4A5A63),
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
@@ -1338,178 +1356,159 @@ private fun WorkoutRestTimerBar(
         1f
     }
 
-    Surface(
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 0.dp,
+    val isDark = apexIsDark()
+    val cardShape = RoundedCornerShape(24.dp)
+    val stepperColor = if (isDark) Color(0xFF1F2A31) else MaterialTheme.colorScheme.surfaceVariant
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .testTag("rest_timer_card")
+            .navigationBarsPadding()
+            .padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 16.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding()
+                .shadow(elevation = 18.dp, shape = cardShape, ambientColor = Color.Black, spotColor = Color.Black)
+                .clip(cardShape)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                .border(1.dp, if (isDark) Color(0xFF22303A) else MaterialTheme.colorScheme.outline, cardShape)
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            HorizontalDivider(
-                thickness = 1.dp,
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.8f)
-            )
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            // Top Row: ВІДПОЧИНОК 1:12 / 1:30  |  [−15] [+15] [⏭]
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Top Row: ВІДПОЧИНОК 01:02 / 01:30  |  [-15] [+15] [⏭]
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "ВІДПОЧИНОК",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            letterSpacing = 1.sp
-                        )
-                        Row(verticalAlignment = Alignment.Bottom) {
-                            Text(
-                                text = formatMinSec(displayedRemaining),
-                                fontSize = 26.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "/ ${formatMinSec(displayedTotal)}",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(bottom = 3.dp)
-                            )
-                        }
-                    }
-
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // -15 button
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                            modifier = Modifier
-                                .height(38.dp)
-                                .clickable { onMinus15s() }
-                                .testTag("rest_minus_15s")
-                        ) {
-                            Box(
-                                modifier = Modifier.padding(horizontal = 12.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "-15",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "ВІДПОЧИНОК",
+                        style = ApexSectionLabel,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = buildAnnotatedString {
+                            append(formatMinSec(displayedRemaining))
+                            withStyle(SpanStyle(fontSize = 15.sp, color = TextMutedDark)) {
+                                append(" / ${formatMinSec(displayedTotal)}")
                             }
-                        }
-
-                        // +15 button
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                            modifier = Modifier
-                                .height(38.dp)
-                                .clickable { onAdd15s() }
-                                .testTag("rest_plus_15s")
-                        ) {
-                            Box(
-                                modifier = Modifier.padding(horizontal = 12.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "+15",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        }
-
-                        // Mint Skip / Start Button
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = IceCyanPrimary,
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clickable {
-                                    if (isRestActive) onSkipRest() else onStartRest()
-                                }
-                                .testTag(if (isRestActive) "skip_rest_next_set_btn" else "start_rest_timer_btn")
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.SkipNext,
-                                    contentDescription = if (isRestActive) "Пропустити відпочинок" else "Почати відпочинок",
-                                    tint = IceCyanOnPrimary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-                    }
+                        },
+                        fontFamily = Unbounded,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 30.sp,
+                        lineHeight = 34.sp,
+                        maxLines = 1,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Progress Line
-                LinearProgressIndicator(
-                    progress = { progress },
-                    color = IceCyanPrimary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(3.dp)
-                        .clip(CircleShape)
+                RestStepperButton(
+                    label = "−15",
+                    a11yLabel = "Мінус 15 секунд",
+                    color = stepperColor,
+                    onClick = onMinus15s,
+                    modifier = Modifier.testTag("rest_minus_15s")
+                )
+                RestStepperButton(
+                    label = "+15",
+                    a11yLabel = "Плюс 15 секунд",
+                    color = stepperColor,
+                    onClick = onAdd15s,
+                    modifier = Modifier.testTag("rest_plus_15s")
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // 4 Presets Row (45 с | 60 с | 90 с | 120 с)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                // Teal Skip / Start Button
+                Surface(
+                    onClick = { if (isRestActive) onSkipRest() else onStartRest() },
+                    shape = RoundedCornerShape(14.dp),
+                    color = IceCyanPrimary,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .testTag(if (isRestActive) "skip_rest_next_set_btn" else "start_rest_timer_btn")
                 ) {
-                    listOf(45, 60, 90, 120).forEach { preset ->
-                        val isSelected = preferredDuration == preset
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (isSelected) IceCyanContainer else MaterialTheme.colorScheme.background,
-                            border = BorderStroke(
-                                1.dp,
-                                if (isSelected) IceCyanPrimary else MaterialTheme.colorScheme.outline
-                            ),
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable { onSelectDuration(preset) }
-                                .testTag("rest_preset_${preset}s")
-                        ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = if (isRestActive) Icons.Default.SkipNext else Icons.Default.PlayArrow,
+                            contentDescription = if (isRestActive) "Пропустити відпочинок" else "Почати відпочинок",
+                            tint = IceCyanOnPrimary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+            }
+
+            // Progress Line
+            LinearProgressIndicator(
+                progress = { progress },
+                color = IceCyanPrimary,
+                trackColor = if (isDark) Color(0xFF22303A) else MaterialTheme.colorScheme.surfaceVariant,
+                strokeCap = StrokeCap.Round,
+                gapSize = 0.dp,
+                drawStopIndicator = {},
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(CircleShape)
+            )
+
+            // 4 Presets Row (45 с | 60 с | 90 с | 120 с)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                listOf(45, 60, 90, 120).forEach { preset ->
+                    val isSelected = preferredDuration == preset
+                    Surface(
+                        onClick = { onSelectDuration(preset) },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                        border = if (isSelected) BorderStroke(1.dp, IceCyanContainerBorder) else null,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(40.dp)
+                            .testTag("rest_preset_${preset}s")
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
                             Text(
                                 text = "$preset с",
-                                fontSize = 11.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                color = if (isSelected) IceCyanPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(vertical = 7.dp)
+                                fontSize = 14.sp,
+                                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun RestStepperButton(
+    label: String,
+    a11yLabel: String,
+    color: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(14.dp),
+        color = color,
+        modifier = modifier
+            .size(48.dp)
+            .semantics { contentDescription = a11yLabel }
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = label,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }

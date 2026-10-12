@@ -119,9 +119,9 @@ fun CalendarTab(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 20.dp)
+            .padding(horizontal = 16.dp)
             .testTag("calendar_screen"),
-        contentPadding = PaddingValues(top = 24.dp, bottom = 96.dp),
+        contentPadding = PaddingValues(top = 20.dp, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         // 1. Top Month Title & Navigation Buttons
@@ -134,33 +134,28 @@ fun CalendarTab(
                 Text(
                     text = buildAnnotatedString {
                         withStyle(
-                            SpanStyle(
-                                color = MaterialTheme.colorScheme.onBackground,
-                                fontWeight = FontWeight.ExtraBold
-                            )
+                            SpanStyle(color = MaterialTheme.colorScheme.onBackground)
                         ) {
                             append(monthNamesUk[displayedMonth])
                         }
                         append(" ")
                         withStyle(
-                            SpanStyle(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.Medium
-                            )
+                            SpanStyle(color = TextMutedDark)
                         ) {
                             append("$displayedYear")
                         }
                     },
-                    fontSize = 28.sp
+                    style = ApexScreenTitle,
+                    modifier = Modifier.padding(start = 4.dp)
                 )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Surface(
-                        shape = RoundedCornerShape(10.dp),
+                        shape = RoundedCornerShape(14.dp),
                         color = MaterialTheme.colorScheme.surface,
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                         modifier = Modifier
-                            .size(38.dp)
+                            .size(44.dp)
                             .clickable {
                                 if (displayedMonth == 0) {
                                     displayedMonth = 11
@@ -182,11 +177,11 @@ fun CalendarTab(
                     }
 
                     Surface(
-                        shape = RoundedCornerShape(10.dp),
+                        shape = RoundedCornerShape(14.dp),
                         color = MaterialTheme.colorScheme.surface,
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                         modifier = Modifier
-                            .size(38.dp)
+                            .size(44.dp)
                             .clickable {
                                 if (displayedMonth == 11) {
                                     displayedMonth = 0
@@ -214,10 +209,10 @@ fun CalendarTab(
         item(key = "calendar_stats_row") {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Surface(
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(16.dp),
                     color = MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     modifier = Modifier.weight(1f)
@@ -228,21 +223,21 @@ fun CalendarTab(
                     ) {
                         Text(
                             text = "$completedInMonthCount",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.ExtraBold,
+                            style = ApexBigNumber,
                             color = IceCyanPrimary
                         )
-                        Spacer(modifier = Modifier.height(2.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "виконано",
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
 
                 Surface(
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(16.dp),
                     color = MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     modifier = Modifier.weight(1f)
@@ -253,21 +248,21 @@ fun CalendarTab(
                     ) {
                         Text(
                             text = "$plannedInMonthCount",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.ExtraBold,
+                            style = ApexBigNumber,
                             color = WarningAmber
                         )
-                        Spacer(modifier = Modifier.height(2.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "заплановано",
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
 
                 Surface(
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(16.dp),
                     color = MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     modifier = Modifier.weight(1.1f)
@@ -282,14 +277,15 @@ fun CalendarTab(
                             } else {
                                 "$totalMinutesMonth хв"
                             },
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.ExtraBold,
+                            style = ApexBigNumber.copy(fontSize = if (totalMinutesMonth >= 60) 17.sp else 22.sp),
+                            maxLines = 1,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Spacer(modifier = Modifier.height(2.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "у залі",
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -300,30 +296,30 @@ fun CalendarTab(
         // 3. Calendar Grid Card + Legend
         item(key = "calendar_grid_card") {
             Card(
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(22.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(14.dp)) {
+                Column(modifier = Modifier.padding(start = 10.dp, end = 10.dp, top = 14.dp, bottom = 10.dp)) {
                     // Weekday headers
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        weekdayHeaders.forEach { dayName ->
+                        weekdayHeaders.forEachIndexed { index, dayName ->
                             Text(
                                 text = dayName,
                                 modifier = Modifier.weight(1f),
                                 textAlign = TextAlign.Center,
                                 fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                fontWeight = FontWeight.Bold,
+                                color = if (index >= 5) MaterialTheme.colorScheme.onSurfaceVariant else TextMutedDark
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     // Days Grid
                     val rows = calendarDays.chunked(7)
@@ -331,7 +327,7 @@ fun CalendarTab(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 3.dp),
+                                .padding(vertical = 2.dp),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             for (i in 0 until 7) {
@@ -342,71 +338,62 @@ fun CalendarTab(
                                     val hasCompleted = daySessions.any { it.isCompleted }
                                     val hasPlanned = daySessions.any { !it.isCompleted }
 
+                                    val isPast = item.dateKey < todayKey
                                     val cellBg = when {
-                                        hasCompleted -> IceCyanContainer
-                                        isSelected -> MaterialTheme.colorScheme.surfaceVariant
+                                        hasCompleted -> MaterialTheme.colorScheme.primary
+                                        isSelected -> MaterialTheme.colorScheme.secondaryContainer
                                         else -> Color.Transparent
                                     }
                                     val cellBorderColor = when {
-                                        hasCompleted && isSelected -> IceCyanPrimary
-                                        hasCompleted -> IceCyanPrimary.copy(alpha = 0.7f)
-                                        isSelected -> IceCyanPrimary.copy(alpha = 0.5f)
+                                        item.isToday && !hasCompleted -> MaterialTheme.colorScheme.onSurface
+                                        hasPlanned && !hasCompleted -> WarningAmber
                                         else -> Color.Transparent
                                     }
                                     val textColor = when {
-                                        hasCompleted -> IceCyanPrimary
-                                        isSelected -> MaterialTheme.colorScheme.onSurface
+                                        hasCompleted -> MaterialTheme.colorScheme.onPrimary
+                                        isSelected || item.isToday -> MaterialTheme.colorScheme.onSurface
+                                        isPast -> TextMutedDark
                                         else -> MaterialTheme.colorScheme.onSurfaceVariant
                                     }
+                                    val dayShape = RoundedCornerShape(12.dp)
 
                                     Box(
                                         modifier = Modifier
                                             .weight(1f)
-                                            .aspectRatio(1f)
-                                            .padding(2.dp)
-                                            .clip(RoundedCornerShape(10.dp))
-                                            .background(cellBg)
-                                            .border(
-                                                width = if (cellBorderColor != Color.Transparent) 1.2.dp else 0.dp,
-                                                color = cellBorderColor,
-                                                shape = RoundedCornerShape(10.dp)
-                                            )
-                                            .clickable { selectedDateKey = item.dateKey }
-                                            .testTag("calendar_day_${item.dateKey}"),
+                                            .height(44.dp),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Column(
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = Arrangement.Center
+                                        Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .then(
+                                                    if (hasCompleted && isSelected) {
+                                                        Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(15.dp)).padding(3.dp)
+                                                    } else {
+                                                        Modifier
+                                                    }
+                                                )
+                                                .clip(dayShape)
+                                                .background(cellBg)
+                                                .border(
+                                                    width = if (cellBorderColor != Color.Transparent) 1.5.dp else 0.dp,
+                                                    color = cellBorderColor,
+                                                    shape = dayShape
+                                                )
+                                                .clickable { selectedDateKey = item.dateKey }
+                                                .testTag("calendar_day_${item.dateKey}"),
+                                            contentAlignment = Alignment.Center
                                         ) {
                                             Text(
                                                 text = "${item.dayNumber}",
-                                                fontSize = 13.sp,
-                                                fontWeight = if (hasCompleted || isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                fontSize = 15.sp,
+                                                fontWeight = when {
+                                                    hasCompleted || item.isToday -> FontWeight.ExtraBold
+                                                    isSelected -> FontWeight.Bold
+                                                    else -> FontWeight.Medium
+                                                },
                                                 color = textColor
                                             )
-
-                                            if (hasCompleted || hasPlanned) {
-                                                Spacer(modifier = Modifier.height(2.dp))
-                                                Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                                                    if (hasCompleted) {
-                                                        Box(
-                                                            modifier = Modifier
-                                                                .size(4.dp)
-                                                                .clip(CircleShape)
-                                                                .background(IceCyanPrimary)
-                                                        )
-                                                    }
-                                                    if (hasPlanned) {
-                                                        Box(
-                                                            modifier = Modifier
-                                                                .size(4.dp)
-                                                                .clip(CircleShape)
-                                                                .background(WarningAmber)
-                                                        )
-                                                    }
-                                                }
-                                            }
                                         }
                                     }
                                 } else {
@@ -416,43 +403,34 @@ fun CalendarTab(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f))
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     // Legend Row
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(18.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        CalendarLegendItem(label = "виконано") {
                             Box(
                                 modifier = Modifier
-                                    .size(7.dp)
+                                    .size(8.dp)
                                     .clip(CircleShape)
-                                    .background(IceCyanPrimary)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "виконано",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    .background(MaterialTheme.colorScheme.primary)
                             )
                         }
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        CalendarLegendItem(label = "заплановано") {
                             Box(
                                 modifier = Modifier
-                                    .size(7.dp)
-                                    .clip(CircleShape)
-                                    .background(WarningAmber)
+                                    .size(8.dp)
+                                    .border(1.5.dp, WarningAmber, CircleShape)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "заплановано",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                        CalendarLegendItem(label = "сьогодні") {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .border(1.5.dp, MaterialTheme.colorScheme.onSurface, RoundedCornerShape(4.dp))
                             )
                         }
                     }
@@ -477,42 +455,43 @@ fun CalendarTab(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.padding(start = 4.dp)) {
                     Text(
                         text = formattedSelectedDate,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
                         text = countLabel,
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(14.dp),
                     color = IceCyanContainer,
-                    border = BorderStroke(1.dp, IceCyanPrimary.copy(alpha = 0.5f)),
+                    border = BorderStroke(1.dp, IceCyanContainerBorder),
                     modifier = Modifier
+                        .height(44.dp)
                         .clickable { showScheduleDialog = true }
                         .testTag("schedule_workout_btn")
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        modifier = Modifier.padding(horizontal = 14.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = null,
                             tint = IceCyanPrimary,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(18.dp)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "Запланувати",
-                            fontSize = 12.sp,
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = IceCyanPrimary
                         )
@@ -527,7 +506,7 @@ fun CalendarTab(
                 var menuExpanded by remember { mutableStateOf(false) }
 
                 Card(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     modifier = Modifier
@@ -545,16 +524,16 @@ fun CalendarTab(
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Surface(
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = if (session.isCompleted) IceCyanContainer else WarningAmberContainer,
-                                    modifier = Modifier.size(38.dp)
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (session.isCompleted) MaterialTheme.colorScheme.primary else WarningAmberContainer,
+                                    modifier = Modifier.size(40.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
                                             imageVector = if (session.isCompleted) Icons.Default.Check else Icons.Default.Schedule,
                                             contentDescription = null,
-                                            tint = if (session.isCompleted) IceCyanPrimary else WarningAmber,
-                                            modifier = Modifier.size(18.dp)
+                                            tint = if (session.isCompleted) MaterialTheme.colorScheme.onPrimary else WarningAmber,
+                                            modifier = Modifier.size(20.dp)
                                         )
                                     }
                                 }
@@ -564,8 +543,8 @@ fun CalendarTab(
                                 Column {
                                     Text(
                                         text = session.title,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.ExtraBold,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
@@ -590,10 +569,11 @@ fun CalendarTab(
 
                             Box {
                                 Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = Color.Transparent,
                                     modifier = Modifier
-                                        .size(32.dp)
+                                        .size(44.dp)
+                                        .clip(RoundedCornerShape(12.dp))
                                         .clickable { menuExpanded = true }
                                         .testTag("delete_session_btn_${session.id}")
                                 ) {
@@ -653,32 +633,31 @@ fun CalendarTab(
                         if (session.isCompleted) {
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = IceCyanContainer,
-                                border = BorderStroke(1.dp, IceCyanPrimary.copy(alpha = 0.35f)),
+                                color = MaterialTheme.colorScheme.secondaryContainer,
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .height(44.dp)
+                                    .clip(RoundedCornerShape(12.dp))
                                     .clickable { viewModel.repeatWorkout(session.id) }
                                     .testTag("repeat_calendar_session_${session.id}")
                             ) {
                                 Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 10.dp),
+                                    modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.Center,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Replay,
                                         contentDescription = null,
-                                        tint = IceCyanPrimary,
-                                        modifier = Modifier.size(16.dp)
+                                        tint = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.size(17.dp)
                                     )
-                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = "Повторити тренування",
-                                        fontSize = 13.sp,
+                                        fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = IceCyanPrimary
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                 }
                             }
@@ -692,7 +671,7 @@ fun CalendarTab(
                                 ),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(42.dp)
+                                    .height(44.dp)
                                     .testTag("start_planned_session_${session.id}")
                             ) {
                                 Icon(
@@ -1000,5 +979,18 @@ fun ScheduleWorkoutModal(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun CalendarLegendItem(label: String, marker: @Composable () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        marker()
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }

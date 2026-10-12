@@ -1,6 +1,17 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -74,112 +85,214 @@ fun TrainingTab(
     }
 
     val listState = rememberLazyListState()
+    val isDark = apexIsDark()
+    val startWorkout = {
+        val finalTitle = workoutTitleInput.trim().ifEmpty { "Силове тренування" }
+        viewModel.startCustomWorkout(finalTitle)
+    }
 
     LazyColumn(
         state = listState,
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 20.dp),
-        contentPadding = PaddingValues(top = 24.dp, bottom = 96.dp),
+            .padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(top = 20.dp, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         // 1. Top Branding & Title
         item(key = "title_section") {
-            Column(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
                 Text(
                     text = "APEX",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = IceCyanPrimary,
-                    letterSpacing = 1.6.sp
+                    style = ApexSectionLabel.copy(fontFamily = Unbounded, fontWeight = FontWeight.Bold, fontSize = 13.sp, letterSpacing = 2.3.sp),
+                    color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = currentDateText,
-                    fontSize = 13.sp,
+                    fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = "Тренування",
-                    fontSize = 30.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                    style = ApexScreenTitle.copy(fontSize = 28.sp, lineHeight = 32.sp),
                     color = MaterialTheme.colorScheme.onBackground
                 )
             }
         }
 
-        // 2. Hero Start Workout Card
-        item(key = "hero_start_card") {
-            Card(
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("today_workout_selector_card")
+        // 2. Frequent Exercises Section (ЧАСТІ ВПРАВИ) — 3-column grid
+        item(key = "frequent_exercises_section") {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedTextField(
-                        value = workoutTitleInput,
-                        onValueChange = { workoutTitleInput = it },
-                        placeholder = {
-                            Text(
-                                text = "Назва для тренування",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                fontSize = 14.sp
-                            )
-                        },
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.background,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.background,
-                            focusedBorderColor = IceCyanPrimary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                        ),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(
-                            onDone = {
-                                val finalTitle = workoutTitleInput.trim().ifEmpty { "Силове тренування" }
-                                viewModel.startCustomWorkout(finalTitle)
-                            }
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("workout_title_input")
-                    )
-
-                    Button(
-                        onClick = {
-                            val finalTitle = workoutTitleInput.trim().ifEmpty { "Силове тренування" }
-                            viewModel.startCustomWorkout(finalTitle)
-                        },
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = IceCyanPrimary,
-                            contentColor = IceCyanOnPrimary
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(54.dp)
-                            .testTag("start_free_workout_btn")
+                Text(
+                    text = "ЧАСТІ ВПРАВИ",
+                    style = ApexSectionLabel,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                )
+                frequentExercises.withIndex().chunked(3).forEach { rowItems ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = "Почати тренування",
-                            tint = IceCyanOnPrimary,
-                            modifier = Modifier.size(26.dp)
-                        )
+                        rowItems.forEach { (index, exName) ->
+                            Surface(
+                                onClick = { viewModel.startQuickExerciseWorkout(exName) },
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surface,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(44.dp)
+                                    .testTag("frequent_exercise_chip_$index")
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Replay,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = exName,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                        }
+                        repeat(3 - rowItems.size) { Spacer(modifier = Modifier.weight(1f)) }
                     }
                 }
             }
         }
 
-        // 3. Muscle Readiness & Recovery Card (48-72h physiological interval & push notifications)
+        // 3. Hero Start Workout Card
+        item(key = "hero_start_card") {
+            val heroBrush = if (isDark) {
+                Brush.verticalGradient(listOf(Color(0xFF102326), Color(0xFF0F1A1E)))
+            } else {
+                Brush.verticalGradient(listOf(Color(0xFFE3F7F4), Color(0xFFF1FAF8)))
+            }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(26.dp))
+                    .background(heroBrush)
+                    .border(1.dp, if (isDark) Color(0xFF1F3E42) else Color(0xFFBFE6E0), RoundedCornerShape(26.dp))
+                    .padding(20.dp)
+                    .testTag("today_workout_selector_card"),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text(
+                    text = "ВІЛЬНЕ ТРЕНУВАННЯ",
+                    style = ApexSectionLabel,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                OutlinedTextField(
+                    value = workoutTitleInput,
+                    onValueChange = { workoutTitleInput = it },
+                    placeholder = {
+                        Text(
+                            text = "Назва для тренування",
+                            color = TextMutedDark,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    },
+                    textStyle = LocalTextStyle.current.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
+                    singleLine = true,
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = if (isDark) Color(0xFF0B1316) else MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = if (isDark) Color(0xFF0B1316) else MaterialTheme.colorScheme.surface,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                    ),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { startWorkout() }),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("workout_title_input")
+                )
+
+                Button(
+                    onClick = { startWorkout() },
+                    shape = RoundedCornerShape(18.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(58.dp)
+                        .testTag("start_free_workout_btn")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Почати тренування",
+                        fontFamily = Unbounded,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        letterSpacing = 0.3.sp
+                    )
+                }
+            }
+        }
+
+        // 4. Warmup & Cooldown tools (2 in a row)
+        item(key = "warmup_cooldown_row") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                MobilityToolButton(
+                    title = "Розминка",
+                    subtitle = "5–10 хв",
+                    icon = Icons.Default.DirectionsRun,
+                    accent = WarningAmber,
+                    tint = if (isDark) Color(0xFF1E1710) else Color(0xFFFFF1E4),
+                    borderColor = if (isDark) Color(0xFF3A2A18) else Color(0xFFF3D9BF),
+                    subtitleColor = if (isDark) Color(0xFFA89480) else Color(0xFF8A6A4A),
+                    onClick = { showMobilityModal = true },
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("dynamic_warmup_btn")
+                )
+                MobilityToolButton(
+                    title = "Заминка",
+                    subtitle = "Розтяжка",
+                    icon = Icons.Default.SelfImprovement,
+                    accent = Color(0xFF7FB2F0),
+                    tint = if (isDark) Color(0xFF0F1824) else Color(0xFFE6F0FC),
+                    borderColor = if (isDark) Color(0xFF1C2C40) else Color(0xFFC9DBF2),
+                    subtitleColor = if (isDark) Color(0xFF8EA3BC) else Color(0xFF4F6784),
+                    onClick = { showMobilityModal = false },
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("static_cooldown_btn")
+                )
+            }
+        }
+
+        // 5. Muscle Readiness & Recovery Card (48-72h physiological interval & push notifications)
         item(key = "muscle_recovery_section") {
             MuscleRecoveryCard(
                 summary = recoverySummary,
@@ -196,253 +309,103 @@ fun TrainingTab(
             )
         }
 
-        // 4. Warmup & Cooldown Cards (2 in a row)
-        item(key = "warmup_cooldown_row") {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+        // 6. Collapsible Workout History
+        item(key = "history_section") {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(20.dp))
+                    .padding(6.dp)
+                    .animateContentSize(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Warmup Card
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { showMobilityModal = true }
-                        .testTag("dynamic_warmup_btn")
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier.size(38.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.DirectionsRun,
-                                    contentDescription = "Розминка",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "Розминка",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "5–10 хв",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-
-                // Cooldown Card
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { showMobilityModal = false }
-                        .testTag("static_cooldown_btn")
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier.size(38.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.SelfImprovement,
-                                    contentDescription = "Заминка",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "Заминка",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Розтяжка",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        // 4. Frequent Exercises Section (ЧАСТІ ВПРАВИ)
-        item(key = "frequent_exercises_section") {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = "ЧАСТІ ВПРАВИ",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    letterSpacing = 1.sp
-                )
-                Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    frequentExercises.forEachIndexed { index, exName ->
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surface,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                            modifier = Modifier
-                                .clickable { viewModel.startQuickExerciseWorkout(exName) }
-                                .testTag("frequent_exercise_chip_$index")
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Replay,
-                                    contentDescription = null,
-                                    tint = IceCyanPrimary,
-                                    modifier = Modifier.size(15.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = exName,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // 5. Collapsible Workout History Card
-        item(key = "history_header") {
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { isHistoryExpanded = !isHistoryExpanded }
-                    .testTag("toggle_history_expand_btn")
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                        .heightIn(min = 48.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .clickable { isHistoryExpanded = !isHistoryExpanded }
+                        .padding(start = 10.dp, end = 8.dp, top = 6.dp, bottom = 6.dp)
+                        .testTag("toggle_history_expand_btn"),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier.size(38.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.History,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "Історія тренувань (${completedSessions.size})",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = if (isHistoryExpanded) {
-                                    "Розгорнуто · натисніть, щоб згорнути"
-                                } else {
-                                    "Згорнуто · натисніть, щоб розгорнути"
-                                },
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = buildAnnotatedString {
+                                append("Історія тренувань ")
+                                withStyle(SpanStyle(color = MaterialTheme.colorScheme.onSurfaceVariant)) {
+                                    append("(${completedSessions.size})")
+                                }
+                            },
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = if (isHistoryExpanded) {
+                                "Натисніть, щоб згорнути"
+                            } else {
+                                "Згорнуто · натисніть, щоб розгорнути"
+                            },
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-
-                    Surface(
-                        shape = RoundedCornerShape(9.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier.size(32.dp)
+                    val chevronRotation by animateFloatAsState(
+                        targetValue = if (isHistoryExpanded) 180f else 0f,
+                        label = "history_chevron"
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(MaterialTheme.colorScheme.surface),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = if (isHistoryExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .size(20.dp)
+                                .rotate(chevronRotation)
+                        )
                     }
                 }
-            }
-        }
 
-        if (isHistoryExpanded) {
-            if (completedSessions.isEmpty()) {
-                item(key = "empty_history") {
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
+                if (isHistoryExpanded) {
+                    if (completedSessions.isEmpty()) {
                         Text(
                             text = "Ще немає завершених тренувань",
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(16.dp)
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
+                        )
+                    } else {
+                        completedSessions.take(20).forEach { session ->
+                            key(session.id) {
+                                WorkoutHistoryCard(
+                                    session = session,
+                                    onRepeat = { viewModel.repeatWorkout(session.id) },
+                                    onDelete = { viewModel.deleteSession(session.id) }
+                                )
+                            }
+                        }
+                    }
+                    TextButton(
+                        onClick = onOpenCalendar,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    ) {
+                        Text(
+                            text = "Відкрити в календарі",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            textDecoration = TextDecoration.Underline,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
-                }
-            } else {
-                items(
-                    items = completedSessions.take(20),
-                    key = { "session_${it.id}" }
-                ) { session ->
-                    WorkoutHistoryCard(
-                        session = session,
-                        onRepeat = { viewModel.repeatWorkout(session.id) },
-                        onDelete = { viewModel.deleteSession(session.id) }
-                    )
                 }
             }
         }
@@ -453,6 +416,65 @@ fun TrainingTab(
             isWarmup = isWarmup,
             onDismiss = { showMobilityModal = null }
         )
+    }
+}
+
+@Composable
+private fun MobilityToolButton(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    accent: Color,
+    tint: Color,
+    borderColor: Color,
+    subtitleColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(18.dp)
+    Row(
+        modifier = modifier
+            .heightIn(min = 72.dp)
+            .clip(shape)
+            .background(
+                Brush.linearGradient(
+                    0f to tint,
+                    0.7f to MaterialTheme.colorScheme.surface
+                )
+            )
+            .border(1.dp, borderColor, shape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(accent.copy(alpha = 0.16f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = accent,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = title,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = subtitle,
+                fontSize = 12.sp,
+                color = subtitleColor
+            )
+        }
     }
 }
 
@@ -469,75 +491,77 @@ fun WorkoutHistoryCard(
     }
 
     Surface(
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(18.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier.padding(start = 14.dp, end = 10.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = session.title,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
+                    fontSize = 15.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = "$dateFormatted · $durationMinutes хв",
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (onRepeat != null) {
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = IceCyanContainer,
-                        border = BorderStroke(1.dp, IceCyanPrimary.copy(alpha = 0.4f)),
-                        modifier = Modifier
-                            .clickable { onRepeat() }
-                            .testTag("repeat_history_btn_${session.id}")
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Replay,
-                                contentDescription = null,
-                                tint = IceCyanPrimary,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "Повторити",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = IceCyanPrimary
-                            )
-                        }
-                    }
+            if (onRepeat != null) {
+                OutlinedButton(
+                    onClick = onRepeat,
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, IceCyanContainerBorder),
+                    contentPadding = PaddingValues(horizontal = 12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+                    modifier = Modifier
+                        .height(44.dp)
+                        .testTag("repeat_history_btn_${session.id}")
+                ) {
+                    Text(
+                        text = "Повторити",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
+            }
 
-                if (onDelete != null) {
-                    Spacer(modifier = Modifier.width(4.dp))
-                    IconButton(
-                        onClick = onDelete,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.DeleteOutline,
-                            contentDescription = "Видалити тренування",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+            if (onDelete != null) {
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.DeleteOutline,
+                        contentDescription = "Видалити тренування",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
         }
