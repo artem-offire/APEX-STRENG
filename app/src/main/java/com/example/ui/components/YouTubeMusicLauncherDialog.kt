@@ -6,10 +6,12 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -27,6 +29,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -366,22 +369,21 @@ fun WorkoutMusicLauncherDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 12.dp, vertical = 16.dp),
+            modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.BottomCenter
         ) {
             Card(
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("workout_music_dialog")
             ) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 Column(
                     modifier = Modifier
-                        .padding(horizontal = 20.dp, vertical = 16.dp)
+                        .navigationBarsPadding()
+                        .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 20.dp)
                         .imePadding()
                 ) {
                     // Top Drag Handle
@@ -391,10 +393,10 @@ fun WorkoutMusicLauncherDialog(
                     ) {
                         Box(
                             modifier = Modifier
-                                .width(36.dp)
-                                .height(4.dp)
+                                .width(40.dp)
+                                .height(5.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.outline)
+                                .background(Color(0xFF33434B))
                         )
                     }
 
@@ -409,23 +411,24 @@ fun WorkoutMusicLauncherDialog(
                         Column {
                             Text(
                                 text = "Музика",
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.ExtraBold,
+                                fontFamily = Unbounded,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = "Відкриється в застосунку сервісу",
-                                fontSize = 12.sp,
+                                fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
 
                         Surface(
-                            shape = RoundedCornerShape(10.dp),
+                            shape = RoundedCornerShape(14.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                             modifier = Modifier
-                                .size(34.dp)
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(14.dp))
                                 .clickable { onDismiss() }
                                 .testTag("close_music_dialog_btn")
                         ) {
@@ -433,20 +436,19 @@ fun WorkoutMusicLauncherDialog(
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = "Закрити",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(16.dp)
+                                    tint = SteelBlueOnContainer,
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     // Service Segmented Switcher (YouTube Music | Spotify)
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(16.dp),
                         color = MaterialTheme.colorScheme.background,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("music_platform_tabs")
@@ -459,7 +461,7 @@ fun WorkoutMusicLauncherDialog(
                         ) {
                             // YouTube Music Tab
                             Surface(
-                                shape = RoundedCornerShape(9.dp),
+                                shape = RoundedCornerShape(12.dp),
                                 color = if (isYouTube) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent,
                                 modifier = Modifier
                                     .weight(1f)
@@ -472,7 +474,7 @@ fun WorkoutMusicLauncherDialog(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 9.dp),
+                                        .height(44.dp),
                                     horizontalArrangement = Arrangement.Center,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -482,11 +484,11 @@ fun WorkoutMusicLauncherDialog(
                                             .clip(CircleShape)
                                             .background(Color(0xFFFF0033))
                                     )
-                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = "YouTube Music",
-                                        fontSize = 12.sp,
-                                        fontWeight = if (isYouTube) FontWeight.Bold else FontWeight.Medium,
+                                        fontSize = 14.sp,
+                                        fontWeight = if (isYouTube) FontWeight.ExtraBold else FontWeight.SemiBold,
                                         color = if (isYouTube) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
@@ -494,7 +496,7 @@ fun WorkoutMusicLauncherDialog(
 
                             // Spotify Tab
                             Surface(
-                                shape = RoundedCornerShape(9.dp),
+                                shape = RoundedCornerShape(12.dp),
                                 color = if (!isYouTube) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent,
                                 modifier = Modifier
                                     .weight(1f)
@@ -507,7 +509,7 @@ fun WorkoutMusicLauncherDialog(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 9.dp),
+                                        .height(44.dp),
                                     horizontalArrangement = Arrangement.Center,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -517,11 +519,11 @@ fun WorkoutMusicLauncherDialog(
                                             .clip(CircleShape)
                                             .background(Color(0xFF1DB954))
                                     )
-                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = "Spotify",
-                                        fontSize = 12.sp,
-                                        fontWeight = if (!isYouTube) FontWeight.Bold else FontWeight.Medium,
+                                        fontSize = 14.sp,
+                                        fontWeight = if (!isYouTube) FontWeight.ExtraBold else FontWeight.SemiBold,
                                         color = if (!isYouTube) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
@@ -529,17 +531,16 @@ fun WorkoutMusicLauncherDialog(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     // МІЙ ПЛЕЙЛИСТ Section
                     Text(
                         text = "МІЙ ПЛЕЙЛИСТ",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
+                        style = ApexSectionLabel,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        letterSpacing = 1.sp
+                        modifier = Modifier.padding(horizontal = 4.dp)
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     Row(
                         modifier = Modifier
@@ -554,21 +555,22 @@ fun WorkoutMusicLauncherDialog(
                             placeholder = {
                                 Text(
                                     text = "Вставте посилання на плейлист",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                    fontSize = 14.sp,
+                                    maxLines = 1,
+                                    color = TextMutedDark
                                 )
                             },
                             singleLine = true,
-                            shape = RoundedCornerShape(10.dp),
+                            shape = RoundedCornerShape(14.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedContainerColor = MaterialTheme.colorScheme.background,
                                 unfocusedContainerColor = MaterialTheme.colorScheme.background,
                                 focusedBorderColor = IceCyanPrimary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
                             ),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(onDone = { handleQuickAddUrl() }),
-                            textStyle = LocalTextStyle.current.copy(fontSize = 12.sp),
+                            textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
                             modifier = Modifier
                                 .weight(1f)
                                 .height(48.dp)
@@ -576,11 +578,11 @@ fun WorkoutMusicLauncherDialog(
                         )
 
                         Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                            shape = RoundedCornerShape(14.dp),
+                            color = SteelBlueContainer,
                             modifier = Modifier
                                 .height(48.dp)
+                                .clip(RoundedCornerShape(14.dp))
                                 .clickable { handleQuickAddUrl() }
                                 .testTag("save_custom_playlist_btn")
                         ) {
@@ -590,9 +592,9 @@ fun WorkoutMusicLauncherDialog(
                             ) {
                                 Text(
                                     text = "ДОДАТИ",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = IceCyanPrimary
                                 )
                             }
                         }
@@ -608,22 +610,31 @@ fun WorkoutMusicLauncherDialog(
                     ) {
                         Text(
                             text = "ПЛЕЙЛИСТИ (${activePlaylists.size})",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
+                            style = ApexSectionLabel,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            letterSpacing = 1.sp
+                            modifier = Modifier.padding(start = 4.dp)
                         )
 
-                        Text(
-                            text = if (isEditMode) "Готово" else "Змінити",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = IceCyanPrimary,
+                        Surface(
+                            onClick = { isEditMode = !isEditMode },
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isEditMode) IceCyanPrimary else Color.Transparent,
                             modifier = Modifier
-                                .clickable { isEditMode = !isEditMode }
-                                .padding(vertical = 2.dp, horizontal = 4.dp)
+                                .height(36.dp)
                                 .testTag("edit_playlists_mode_btn")
-                        )
+                        ) {
+                            Box(
+                                modifier = Modifier.padding(horizontal = 12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (isEditMode) "Готово" else "Змінити",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = if (isEditMode) IceCyanOnPrimary else IceCyanPrimary
+                                )
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -665,18 +676,34 @@ fun WorkoutMusicLauncherDialog(
 
                     // Playlists List
                     LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = 310.dp)
+                            .heightIn(max = 340.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(MaterialTheme.colorScheme.background)
+                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(20.dp))
                     ) {
-                        items(activePlaylists, key = { it.id }) { playlist ->
+                        if (activePlaylists.isEmpty()) {
+                            item(key = "empty_playlists") {
+                                Text(
+                                    text = "Плейлистів немає. Додайте свій за посиланням вище.",
+                                    fontSize = 13.sp,
+                                    textAlign = TextAlign.Center,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 20.dp)
+                                )
+                            }
+                        }
+                        itemsIndexed(activePlaylists, key = { _, pl -> pl.id }) { index, playlist ->
                             val accentColor = Color(playlist.accentHex)
 
+                            if (index > 0) {
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                            }
                             Surface(
-                                shape = RoundedCornerShape(14.dp),
-                                color = MaterialTheme.colorScheme.background,
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                color = Color.Transparent,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
@@ -694,7 +721,9 @@ fun WorkoutMusicLauncherDialog(
                                     .testTag("playlist_item_${playlist.id}")
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                    modifier = Modifier
+                                        .heightIn(min = 68.dp)
+                                        .padding(horizontal = 12.dp, vertical = 10.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
@@ -704,15 +733,16 @@ fun WorkoutMusicLauncherDialog(
                                     ) {
                                         // Colored Letter Avatar
                                         Surface(
-                                            shape = RoundedCornerShape(10.dp),
+                                            shape = RoundedCornerShape(12.dp),
                                             color = accentColor.copy(alpha = 0.16f),
-                                            modifier = Modifier.size(38.dp)
+                                            modifier = Modifier.size(44.dp)
                                         ) {
                                             Box(contentAlignment = Alignment.Center) {
                                                 Text(
                                                     text = playlist.letter.take(1).uppercase(),
-                                                    fontSize = 15.sp,
-                                                    fontWeight = FontWeight.ExtraBold,
+                                                    fontFamily = Unbounded,
+                                                    fontSize = 17.sp,
+                                                    fontWeight = FontWeight.Bold,
                                                     color = accentColor
                                                 )
                                             }
@@ -724,30 +754,30 @@ fun WorkoutMusicLauncherDialog(
                                             Row(verticalAlignment = Alignment.CenterVertically) {
                                                 Text(
                                                     text = playlist.title,
-                                                    fontSize = 14.sp,
-                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 15.sp,
+                                                    fontWeight = FontWeight.ExtraBold,
                                                     color = MaterialTheme.colorScheme.onSurface,
                                                     maxLines = 1,
                                                     overflow = TextOverflow.Ellipsis
                                                 )
-                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Spacer(modifier = Modifier.width(8.dp))
                                                 Surface(
-                                                    shape = RoundedCornerShape(6.dp),
+                                                    shape = RoundedCornerShape(7.dp),
                                                     color = accentColor.copy(alpha = 0.16f)
                                                 ) {
                                                     Text(
                                                         text = playlist.badge,
-                                                        fontSize = 10.sp,
-                                                        fontWeight = FontWeight.Bold,
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.ExtraBold,
                                                         color = accentColor,
                                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                                     )
                                                 }
                                             }
-                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Spacer(modifier = Modifier.height(3.dp))
                                             Text(
                                                 text = playlist.subtitle,
-                                                fontSize = 11.sp,
+                                                fontSize = 13.sp,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
@@ -760,7 +790,7 @@ fun WorkoutMusicLauncherDialog(
                                             IconButton(
                                                 onClick = { editingPlaylist = playlist },
                                                 modifier = Modifier
-                                                    .size(30.dp)
+                                                    .size(44.dp)
                                                     .testTag("edit_playlist_btn_${playlist.id}")
                                             ) {
                                                 Icon(
@@ -775,7 +805,7 @@ fun WorkoutMusicLauncherDialog(
                                                     updateActivePlaylists(activePlaylists.filter { it.id != playlist.id })
                                                 },
                                                 modifier = Modifier
-                                                    .size(30.dp)
+                                                    .size(44.dp)
                                                     .testTag("delete_playlist_btn_${playlist.id}")
                                             ) {
                                                 Icon(
@@ -790,14 +820,14 @@ fun WorkoutMusicLauncherDialog(
                                         Surface(
                                             shape = CircleShape,
                                             color = MaterialTheme.colorScheme.surfaceVariant,
-                                            modifier = Modifier.size(32.dp)
+                                            modifier = Modifier.size(44.dp)
                                         ) {
                                             Box(contentAlignment = Alignment.Center) {
                                                 Icon(
                                                     imageVector = Icons.Default.PlayArrow,
-                                                    contentDescription = "Відтворити",
-                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    modifier = Modifier.size(16.dp)
+                                                    contentDescription = "Увімкнути плейлист ${playlist.title}",
+                                                    tint = MaterialTheme.colorScheme.onSurface,
+                                                    modifier = Modifier.size(18.dp)
                                                 )
                                             }
                                         }
@@ -819,14 +849,14 @@ fun WorkoutMusicLauncherDialog(
                             }
                             onDismiss()
                         },
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(18.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = IceCyanPrimary,
                             contentColor = IceCyanOnPrimary
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(50.dp)
+                            .height(56.dp)
                             .testTag(if (isYouTube) "open_yt_music_app_btn" else "open_spotify_app_btn")
                     ) {
                         Icon(
@@ -838,8 +868,8 @@ fun WorkoutMusicLauncherDialog(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = if (isYouTube) "Відкрити YouTube Music" else "Відкрити Spotify",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 15.sp,
                             color = IceCyanOnPrimary
                         )
                     }

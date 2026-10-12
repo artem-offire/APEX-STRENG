@@ -22,8 +22,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.screens.*
-import com.example.ui.theme.IceCyanContainer
-import com.example.ui.theme.IceCyanPrimary
 import kotlinx.coroutines.launch
 
 enum class ApexTab(
@@ -57,7 +55,7 @@ fun ApexApp(viewModel: ApexViewModel) {
             containerColor = MaterialTheme.colorScheme.background,
             bottomBar = {
                 Surface(
-                    color = MaterialTheme.colorScheme.background,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
                     tonalElevation = 0.dp
                 ) {
                     Column(
@@ -67,53 +65,53 @@ fun ApexApp(viewModel: ApexViewModel) {
                     ) {
                         HorizontalDivider(
                             thickness = 1.dp,
-                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.outline
                         )
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             ApexTab.values().forEachIndexed { index, tab ->
                                 val isSelected = pagerState.currentPage == index
-                                val activeBg = if (isSelected) IceCyanContainer else Color.Transparent
-                                val contentColor = if (isSelected) IceCyanPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                val contentColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
 
-                                Box(
+                                Column(
                                     modifier = Modifier
                                         .weight(1f)
-                                        .padding(horizontal = 6.dp)
-                                        .clip(RoundedCornerShape(14.dp))
-                                        .background(activeBg)
+                                        .clip(RoundedCornerShape(16.dp))
                                         .clickable {
                                             coroutineScope.launch {
                                                 pagerState.animateScrollToPage(index)
                                             }
                                         }
-                                        .padding(vertical = 8.dp, horizontal = 12.dp)
+                                        .padding(vertical = 6.dp)
                                         .testTag(tab.testTag),
-                                    contentAlignment = Alignment.Center
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center
+                                    // Pill indicator behind the active icon
+                                    Box(
+                                        modifier = Modifier
+                                            .size(width = 56.dp, height = 30.dp)
+                                            .clip(RoundedCornerShape(15.dp))
+                                            .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent),
+                                        contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             imageVector = tab.icon,
-                                            contentDescription = tab.titleUk,
+                                            contentDescription = null,
                                             tint = contentColor,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.height(3.dp))
-                                        Text(
-                                            text = tab.titleUk,
-                                            fontSize = 11.sp,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                            color = contentColor
+                                            modifier = Modifier.size(22.dp)
                                         )
                                     }
+                                    Text(
+                                        text = tab.titleUk,
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                        color = contentColor
+                                    )
                                 }
                             }
                         }
