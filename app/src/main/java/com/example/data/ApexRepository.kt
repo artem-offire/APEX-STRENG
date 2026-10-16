@@ -649,8 +649,8 @@ class ApexRepository(private val dao: ApexDao) {
         // Filter last 7 days completed working sets
         val oneWeekAgo = System.currentTimeMillis() - 7L * 24 * 3600 * 1000
         completedSets.filter { it.timestamp >= oneWeekAgo }.forEach { set ->
-            val muscle = MuscleGroup.fromStringOrNull(set.muscleGroup)
-            if (muscle != null) {
+            val muscles = MuscleGroup.parseMuscleGroups(set.muscleGroup)
+            for (muscle in muscles) {
                 counts[muscle] = (counts[muscle] ?: 0) + 1
             }
         }

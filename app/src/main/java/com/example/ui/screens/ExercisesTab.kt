@@ -63,20 +63,23 @@ fun ExercisesTab(viewModel: ApexViewModel) {
         val category = selectedMuscleCategory
 
         allExercises.filter { ex ->
+            val exerciseMuscles = MuscleGroup.parseMuscleGroups(ex.muscleGroup)
             val matchesSearch = searchQuery.isBlank() ||
                     ex.name.contains(searchQuery, ignoreCase = true) ||
                     ex.instructionsUk.contains(searchQuery, ignoreCase = true) ||
                     ex.muscleGroup.contains(searchQuery, ignoreCase = true) ||
-                    (ex.muscleGroup.equals("FOREARMS", ignoreCase = true) &&
+                    exerciseMuscles.any { it.displayNameUk.contains(searchQuery, ignoreCase = true) } ||
+                    (exerciseMuscles.contains(MuscleGroup.FOREARMS) &&
                             (searchQuery.contains("предпліч", ignoreCase = true) || searchQuery.contains("передпліч", ignoreCase = true)))
 
             val matchesCategory = category == null ||
                     category == "All categories" ||
-                    ex.muscleGroup.equals(category, ignoreCase = true) ||
-                    MuscleGroup.values().find {
-                        it.displayNameUk.equals(category, ignoreCase = true) ||
-                        (it == MuscleGroup.FOREARMS && (category.contains("передпліч", ignoreCase = true) || category.contains("предпліч", ignoreCase = true)))
-                    }?.name.equals(ex.muscleGroup, ignoreCase = true)
+                    ex.muscleGroup.contains(category, ignoreCase = true) ||
+                    exerciseMuscles.any { mg ->
+                        mg.displayNameUk.equals(category, ignoreCase = true) ||
+                        mg.name.equals(category, ignoreCase = true) ||
+                        (mg == MuscleGroup.FOREARMS && (category.contains("передпліч", ignoreCase = true) || category.contains("предпліч", ignoreCase = true)))
+                    }
 
             val isConnectedInGym = availableEquipSet == null || availableEquipSet.contains(ex.equipment)
 
@@ -366,6 +369,7 @@ fun ExercisesTab(viewModel: ApexViewModel) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ConnectorCard(
     exercise: ExerciseEntity,
@@ -475,6 +479,32 @@ fun ConnectorCard(
                     overflow = TextOverflow.Ellipsis,
                     lineHeight = 16.sp
                 )
+
+                val cardMuscles = remember(exercise.muscleGroup) {
+                    MuscleGroup.parseMuscleGroups(exercise.muscleGroup)
+                }
+                if (cardMuscles.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        cardMuscles.forEach { mg ->
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = IceCyanContainer.copy(alpha = 0.5f)
+                            ) {
+                                Text(
+                                    text = mg.displayNameUk,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = IceCyanPrimary,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.width(6.dp))
@@ -526,7 +556,7 @@ fun ExerciseTechniqueDialog(
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
-                        val muscleUk = MuscleGroup.values().find { it.name.equals(exercise.muscleGroup, ignoreCase = true) }?.displayNameUk ?: exercise.muscleGroup
+                        val muscleUk = MuscleGroup.formatMuscleGroupsUk(exercise.muscleGroup)
                         Text(
                             text = "$muscleUk • ${exercise.equipment} • ${exercise.movementPattern}",
                             style = MaterialTheme.typography.labelSmall,
@@ -676,10 +706,11 @@ fun AddOrEditExerciseDialog(
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf(initialExercise?.name ?: "") }
-    var selectedMuscle by remember {
+    var selectedMuscles by remember {
         mutableStateOf(
-            MuscleGroup.values().find { it.name.equals(initialExercise?.muscleGroup, ignoreCase = true) }
-                ?: MuscleGroup.CHEST
+            MuscleGroup.parseMuscleGroups(initialExercise?.muscleGroup).toSet().ifEmpty {
+                setOf(MuscleGroup.CHEST)
+            }
         )
     }
     var selectedEquipment by remember {
@@ -750,16 +781,23 @@ fun AddOrEditExerciseDialog(
                 }
 
                 item {
-                    Text("Цільова м'язова група:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Цільові м'язові групи (можна обрати декілька):", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     FlowRow(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         MuscleGroup.values().forEach { m ->
+                            val isSelected = selectedMuscles.contains(m)
                             FilterChip(
-                                selected = selectedMuscle == m,
-                                onClick = { selectedMuscle = m },
+                                selected = isSelected,
+                                onClick = {
+                                    selectedMuscles = if (isSelected) {
+                                        if (selectedMuscles.size > 1) selectedMuscles - m else selectedMuscles
+                                    } else {
+                                        selectedMuscles + m
+                                    }
+                                },
                                 label = { Text(m.displayNameUk, fontSize = 11.sp) }
                             )
                         }
@@ -844,7 +882,7 @@ fun AddOrEditExerciseDialog(
                             val entity = ExerciseEntity(
                                 id = initialExercise?.id ?: 0L,
                                 name = name.trim(),
-                                muscleGroup = selectedMuscle.name,
+                                muscleGroup = selectedMuscles.joinToString(",") { it.name },
                                 equipment = selectedEquipment.name,
                                 movementPattern = initialExercise?.movementPattern ?: MovementPattern.HORIZONTAL_PRESS.name,
                                 instructionsUk = instructions.trim().ifEmpty { "Власна вправа" },

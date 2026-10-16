@@ -516,7 +516,7 @@ fun ScientificVolumeModal(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            MuscleGroup.values().forEach { muscle ->
+                            MuscleGroup.values().filter { it != MuscleGroup.OTHER }.forEach { muscle ->
                                 val isPriority = priorityMuscles.contains(muscle)
                                 FilterChip(
                                     selected = isPriority,

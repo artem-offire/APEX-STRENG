@@ -65,14 +65,15 @@ fun TrainingTab(
         allSessions.filter { it.isCompleted }.sortedByDescending { it.dateTimestamp }
     }
 
-    val frequentExercises = remember(allCompletedSets) {
-        val defaultChips = listOf("Жим лежачи", "Присідання", "Тяга блока")
-        val userTop = allCompletedSets
-            .groupBy { it.exerciseName }
-            .entries
-            .sortedByDescending { it.value.size }
-            .map { it.key }
-        (defaultChips + userTop).distinct().take(6)
+    val frequentWorkouts = remember(completedSessions) {
+        val uniqueMap = mutableMapOf<String, WorkoutSessionEntity>()
+        for (session in completedSessions) {
+            val cleanTitle = session.title.trim()
+            if (cleanTitle.isNotEmpty() && !uniqueMap.containsKey(cleanTitle)) {
+                uniqueMap[cleanTitle] = session
+            }
+        }
+        uniqueMap.values.take(6).toList()
     }
 
     val currentDateText = remember {
@@ -122,58 +123,86 @@ fun TrainingTab(
             }
         }
 
-        // 2. Frequent Exercises Section (ЧАСТІ ВПРАВИ) — 3-column grid
-        item(key = "frequent_exercises_section") {
+        // 2. Frequent Workouts Section (ЧАСТІ ТРЕНУВАННЯ) — 3-column grid
+        item(key = "frequent_workouts_section") {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "ЧАСТІ ВПРАВИ",
+                    text = "ЧАСТІ ТРЕНУВАННЯ",
                     style = ApexSectionLabel,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 4.dp)
                 )
-                frequentExercises.withIndex().chunked(3).forEach { rowItems ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        rowItems.forEach { (index, exName) ->
-                            Surface(
-                                onClick = { viewModel.startQuickExerciseWorkout(exName) },
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.surface,
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(44.dp)
-                                    .testTag("frequent_exercise_chip_$index")
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp),
-                                    horizontalArrangement = Arrangement.Center,
-                                    verticalAlignment = Alignment.CenterVertically
+                if (frequentWorkouts.isNotEmpty()) {
+                    frequentWorkouts.withIndex().chunked(3).forEach { rowItems ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            rowItems.forEach { (index, session) ->
+                                Surface(
+                                    onClick = { viewModel.repeatWorkout(session.id) },
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(44.dp)
+                                        .testTag("frequent_workout_chip_$index")
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Replay,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(15.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = exName,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 8.dp),
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Replay,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(15.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = session.title,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
                                 }
                             }
+                            repeat(3 - rowItems.size) { Spacer(modifier = Modifier.weight(1f)) }
                         }
-                        repeat(3 - rowItems.size) { Spacer(modifier = Modifier.weight(1f)) }
+                    }
+                } else {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.History,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = "Тут будуть ваші завершені тренування для швидкого повторення",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }

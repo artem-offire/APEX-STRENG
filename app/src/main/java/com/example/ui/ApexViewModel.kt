@@ -254,7 +254,7 @@ class ApexViewModel(application: Application) : AndroidViewModel(application) {
     val isRestActive: StateFlow<Boolean> = com.example.service.RestTimerManager.isRestActive
 
     fun setPreferredRestDuration(seconds: Int) {
-        _preferredRestDuration.value = seconds.coerceIn(45, 180)
+        _preferredRestDuration.value = seconds.coerceIn(30, 600)
     }
 
     // Dark theme override (default to true for Obsidian & Mint theme)
@@ -676,6 +676,10 @@ class ApexViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun renameWorkoutExercise(workoutExerciseId: Long, newName: String, newMuscleGroup: String? = null) {
+        updateWorkoutExerciseDetails(workoutExerciseId, newName, newMuscleGroup)
+    }
+
+    fun updateWorkoutExerciseDetails(workoutExerciseId: Long, newName: String, newMuscleGroup: String? = null) {
         viewModelScope.launch {
             val cleanName = newName.trim()
             if (cleanName.isEmpty()) return@launch
@@ -683,11 +687,26 @@ class ApexViewModel(application: Application) : AndroidViewModel(application) {
             val currentList = _activeWorkoutExercisesWithSets.value
             val match = currentList.find { it.exercise.id == workoutExerciseId }?.exercise
             if (match != null) {
+                val targetMuscleGroup = newMuscleGroup ?: match.muscleGroup
                 val updated = match.copy(
                     exerciseName = cleanName,
-                    muscleGroup = newMuscleGroup ?: match.muscleGroup
+                    muscleGroup = targetMuscleGroup
                 )
                 db.apexDao().updateWorkoutExercise(updated)
+
+                // Also update corresponding catalog exercise if linked or by matching name
+                if (match.exerciseId > 0) {
+                    val baseExercise = db.apexDao().getExerciseById(match.exerciseId)
+                    if (baseExercise != null) {
+                        db.apexDao().updateExercise(baseExercise.copy(name = cleanName, muscleGroup = targetMuscleGroup))
+                    }
+                } else {
+                    val byName = db.apexDao().getExerciseByName(match.exerciseName)
+                    if (byName != null) {
+                        db.apexDao().updateExercise(byName.copy(name = cleanName, muscleGroup = targetMuscleGroup))
+                    }
+                }
+
                 _activeWorkoutSessionId.value?.let { loadActiveWorkoutData(it) }
             }
         }
@@ -1327,7 +1346,29 @@ class ApexViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val cleanName = exercise.name.trim()
             if (cleanName.isEmpty()) return@launch
-            repository.upsertExercise(exercise.copy(name = cleanName))
+            val updatedExercise = exercise.copy(name = cleanName)
+            repository.upsertExercise(updatedExercise)
+
+            // Propagate muscle group update to active workout exercises if present
+            val activeSessionId = _activeWorkoutSessionId.value
+            if (activeSessionId != null) {
+                val currentList = _activeWorkoutExercisesWithSets.value
+                var changed = false
+                for (item in currentList) {
+                    if (item.exercise.exerciseId == exercise.id || item.exercise.exerciseName.equals(cleanName, ignoreCase = true)) {
+                        db.apexDao().updateWorkoutExercise(
+                            item.exercise.copy(
+                                exerciseName = cleanName,
+                                muscleGroup = exercise.muscleGroup
+                            )
+                        )
+                        changed = true
+                    }
+                }
+                if (changed) {
+                    loadActiveWorkoutData(activeSessionId)
+                }
+            }
         }
     }
 

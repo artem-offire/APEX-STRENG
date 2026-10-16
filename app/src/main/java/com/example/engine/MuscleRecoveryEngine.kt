@@ -60,6 +60,7 @@ object MuscleRecoveryEngine {
             MuscleGroup.FOREARMS -> 48
             MuscleGroup.CALVES -> 48
             MuscleGroup.ABS -> 48
+            MuscleGroup.OTHER -> 48
         }
     }
 
@@ -73,11 +74,15 @@ object MuscleRecoveryEngine {
 
         for (set in completedSets) {
             if (!set.isCompleted || set.isWarmup) continue
-            val group = MuscleGroup.fromStringOrNull(set.muscleGroup) ?: continue
-            setsByMuscle[group]?.add(set)
+            val groups = MuscleGroup.parseMuscleGroups(set.muscleGroup)
+            for (group in groups) {
+                setsByMuscle[group]?.add(set)
+            }
         }
 
-        val statuses = MuscleGroup.values().map { muscle ->
+        // Biological muscle groups for physiological recovery tracking (excluding generic OTHER)
+        val targetMuscles = MuscleGroup.values().filter { it != MuscleGroup.OTHER }
+        val statuses = targetMuscles.map { muscle ->
             calculateStatusForMuscle(muscle, setsByMuscle[muscle] ?: emptyList(), nowMs)
         }
 

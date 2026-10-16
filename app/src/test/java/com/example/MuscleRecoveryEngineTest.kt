@@ -22,18 +22,25 @@ class MuscleRecoveryEngineTest {
         assertEquals(48, MuscleRecoveryEngine.getPhysiologicalRecoveryHours(MuscleGroup.BICEPS))
         assertEquals(48, MuscleRecoveryEngine.getPhysiologicalRecoveryHours(MuscleGroup.TRICEPS))
         assertEquals(48, MuscleRecoveryEngine.getPhysiologicalRecoveryHours(MuscleGroup.ABS))
+        assertEquals(48, MuscleRecoveryEngine.getPhysiologicalRecoveryHours(MuscleGroup.OTHER))
     }
 
     @Test
-    fun testUntrainedMusclesAreFullyRecovered() {
+    fun testUntrainedMusclesAreFullyRecoveredAndExcludesOther() {
         val summary = MuscleRecoveryEngine.computeRecoverySummary(emptyList())
         assertEquals(11, summary.readyMuscleGroups.size)
         assertTrue(summary.recoveringMuscleGroups.isEmpty())
+        assertFalse("OTHER should be excluded from physiological recovery card", summary.readyMuscleGroups.contains(MuscleGroup.OTHER))
 
         val chest = summary.statuses.first { it.muscleGroup == MuscleGroup.CHEST }
         assertEquals(100, chest.recoveryPercent)
         assertEquals(RecoveryState.RECOVERED, chest.state)
         assertEquals(0.0, chest.hoursRemaining, 0.01)
+
+        // Verify parsing for OTHER
+        assertEquals(MuscleGroup.OTHER, MuscleGroup.fromStringOrNull("Інше"))
+        assertEquals(MuscleGroup.OTHER, MuscleGroup.fromStringOrNull("OTHER"))
+        assertEquals(MuscleGroup.OTHER, MuscleGroup.fromStringOrNull("різне"))
     }
 
     @Test
@@ -73,5 +80,36 @@ class MuscleRecoveryEngineTest {
         assertEquals(RecoveryState.RECOVERED, chest60h.state)
         assertEquals(100, chest60h.recoveryPercent)
         assertEquals(0.0, chest60h.hoursRemaining, 0.01)
+    }
+
+    @Test
+    fun testExerciseWithMultipleMusclesEngagesAllOfThem() {
+        val now = 1000000000000L
+        val multiMuscleSet = WorkoutSetWithExerciseInfo(
+            id = 10,
+            workoutExerciseId = 2,
+            setNumber = 1,
+            weightKg = 80.0,
+            reps = 10,
+            targetRepsMin = 8,
+            targetRepsMax = 12,
+            rir = 2,
+            isWarmup = false,
+            isCompleted = true,
+            timestamp = now - (1 * 3600 * 1000L), // 1 hour ago
+            exerciseName = "Жим лежачи на похилій",
+            muscleGroup = "CHEST,TRICEPS,SHOULDERS"
+        )
+
+        val summary = MuscleRecoveryEngine.computeRecoverySummary(listOf(multiMuscleSet), now)
+        val chest = summary.statuses.first { it.muscleGroup == MuscleGroup.CHEST }
+        val triceps = summary.statuses.first { it.muscleGroup == MuscleGroup.TRICEPS }
+        val shoulders = summary.statuses.first { it.muscleGroup == MuscleGroup.SHOULDERS }
+        val back = summary.statuses.first { it.muscleGroup == MuscleGroup.BACK }
+
+        assertEquals(RecoveryState.EXHAUSTED, chest.state)
+        assertEquals(RecoveryState.EXHAUSTED, triceps.state)
+        assertEquals(RecoveryState.EXHAUSTED, shoulders.state)
+        assertEquals(RecoveryState.RECOVERED, back.state)
     }
 }

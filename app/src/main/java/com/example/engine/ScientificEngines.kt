@@ -19,7 +19,7 @@ object VolumeLandmarksCalculator {
         val expMultiplier = config.experienceLevel.multiplier
         val recoveryMultiplier = config.sleepFactor.factor * config.nutritionFactor.factor * config.stressFactor.factor
 
-        return MuscleGroup.values().map { muscle ->
+        return MuscleGroup.values().filter { it != MuscleGroup.OTHER }.map { muscle ->
             val isPriority = config.priorityMuscles.contains(muscle)
             val priorityMultiplier = if (isPriority) 1.25f else 0.85f
 

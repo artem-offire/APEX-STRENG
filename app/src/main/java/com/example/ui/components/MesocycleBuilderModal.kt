@@ -408,7 +408,7 @@ private fun Step1ModelAndParams(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                MuscleGroup.values().forEach { muscle ->
+                MuscleGroup.values().filter { it != MuscleGroup.OTHER }.forEach { muscle ->
                     val isSelected = priorityMuscles.contains(muscle)
                     FilterChip(
                         selected = isSelected,
@@ -841,6 +841,7 @@ fun ExercisePickerDialog(
                                         "FOREARMS" -> "Передпліччя"
                                         "ABS" -> "Прес"
                                         "CALVES" -> "Литки"
+                                        "OTHER" -> "Інше"
                                         else -> ex.muscleGroup
                                     }
                                     Text(muscleUk, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)

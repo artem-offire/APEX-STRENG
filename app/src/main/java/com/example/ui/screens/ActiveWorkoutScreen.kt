@@ -57,6 +57,7 @@ import com.example.ui.components.ExerciseSubstitutionModal
 import com.example.ui.components.WorkoutMusicLauncherDialog
 import com.example.ui.theme.*
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ActiveWorkoutScreen(
     sessionId: Long,
@@ -90,6 +91,7 @@ fun ActiveWorkoutScreen(
 
     var editingExerciseItem by remember { mutableStateOf<WorkoutExerciseWithSets?>(null) }
     var editingExerciseNewName by remember { mutableStateOf("") }
+    var editingExerciseSelectedMuscles by remember { mutableStateOf<Set<MuscleGroup>>(emptySet()) }
     var exerciseItemToDelete by remember { mutableStateOf<WorkoutExerciseWithSets?>(null) }
     var replacingExerciseItem by remember { mutableStateOf<WorkoutExerciseWithSets?>(null) }
 
@@ -105,6 +107,23 @@ fun ActiveWorkoutScreen(
     }
     val totalWorkingSetsCount = remember(allActiveSets) {
         allActiveSets.count { !it.isWarmup }
+    }
+
+    val currentExercise = remember(activeExercisesWithSets) {
+        activeExercisesWithSets.firstOrNull { item -> item.sets.any { !it.isCompleted } }?.exercise
+            ?: activeExercisesWithSets.firstOrNull()?.exercise
+    }
+
+    val isCurrentCompound = remember(currentExercise) {
+        val name = currentExercise?.exerciseName?.lowercase() ?: ""
+        val isIsolation = name.contains("біцепс") || name.contains("підйом") ||
+                name.contains("розведен") || name.contains("махи") ||
+                name.contains("трицепс") || name.contains("розгинання") ||
+                name.contains("згинання") || name.contains("литки") ||
+                name.contains("ікри") || name.contains("прес") ||
+                name.contains("скручування") || name.contains("молотки") ||
+                name.contains("пуловер") || name.contains("планка")
+        !isIsolation
     }
 
     val listState = rememberLazyListState()
@@ -340,7 +359,8 @@ fun ActiveWorkoutScreen(
                         viewModel.setPreferredRestDuration(preferredRestDuration - 15)
                     }
                 },
-                onSkipRest = { viewModel.cancelRestTimer() }
+                onSkipRest = { viewModel.cancelRestTimer() },
+                isCompoundExercise = isCurrentCompound
             )
         }
     ) { innerPadding ->
@@ -457,6 +477,7 @@ fun ActiveWorkoutScreen(
                     onEditName = {
                         editingExerciseItem = item
                         editingExerciseNewName = exerciseName
+                        editingExerciseSelectedMuscles = MuscleGroup.parseMuscleGroups(item.exercise.muscleGroup).toSet().ifEmpty { setOf(MuscleGroup.CHEST) }
                     },
                     onReplaceExercise = {
                         replacingExerciseItem = item
@@ -598,24 +619,70 @@ fun ActiveWorkoutScreen(
     if (editingExerciseItem != null) {
         AlertDialog(
             onDismissRequest = { editingExerciseItem = null },
-            title = { Text("Змінити назву вправи", fontWeight = FontWeight.Bold) },
+            title = { Text("Редагувати вправу", fontWeight = FontWeight.Bold) },
             text = {
-                OutlinedTextField(
-                    value = editingExerciseNewName,
-                    onValueChange = { editingExerciseNewName = it },
-                    label = { Text("Нова назва вправи") },
-                    singleLine = true,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("edit_exercise_name_input")
-                )
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    OutlinedTextField(
+                        value = editingExerciseNewName,
+                        onValueChange = { editingExerciseNewName = it },
+                        label = { Text("Назва вправи") },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("edit_exercise_name_input")
+                    )
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "Цільові групи м'язів (можна декілька):",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            MuscleGroup.values().forEach { mg ->
+                                val isSelected = editingExerciseSelectedMuscles.contains(mg)
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = {
+                                        editingExerciseSelectedMuscles = if (isSelected) {
+                                            if (editingExerciseSelectedMuscles.size > 1) editingExerciseSelectedMuscles - mg else editingExerciseSelectedMuscles
+                                        } else {
+                                            editingExerciseSelectedMuscles + mg
+                                        }
+                                    },
+                                    label = { Text(mg.displayNameUk, fontSize = 11.sp) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = IceCyanPrimary.copy(alpha = 0.2f),
+                                        selectedLabelColor = IceCyanPrimary
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
             },
             confirmButton = {
                 Button(
                     onClick = {
                         val item = editingExerciseItem
                         if (item != null && editingExerciseNewName.isNotBlank()) {
-                            viewModel.renameWorkoutExercise(item.exercise.id, editingExerciseNewName)
+                            val muscleString = editingExerciseSelectedMuscles.joinToString(",") { it.name }
+                            viewModel.updateWorkoutExerciseDetails(
+                                workoutExerciseId = item.exercise.id,
+                                newName = editingExerciseNewName,
+                                newMuscleGroup = muscleString
+                            )
                         }
                         editingExerciseItem = null
                     },
@@ -755,6 +822,7 @@ private fun VolumeOverloadWarningBanner(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ExerciseWorkoutCard(
     exerciseName: String,
@@ -775,8 +843,10 @@ fun ExerciseWorkoutCard(
     val repsMax = firstSet?.targetRepsMax ?: 12
     var menuExpanded by remember { mutableStateOf(false) }
 
-    val muscleTitleUk = remember(muscleGroup) {
-        runCatching { MuscleGroup.valueOf(muscleGroup).displayNameUk }.getOrDefault("Груди")
+    val targetMuscles = remember(muscleGroup) {
+        MuscleGroup.parseMuscleGroups(muscleGroup).ifEmpty {
+            listOfNotNull(MuscleGroup.fromStringOrNull(muscleGroup))
+        }
     }
 
     val firstUncompletedSetId = remember(sets) {
@@ -839,7 +909,7 @@ fun ExerciseWorkoutCard(
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Перейменувати") },
+                            text = { Text("Редагувати вправу") },
                             leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
                             onClick = {
                                 menuExpanded = false
@@ -866,19 +936,25 @@ fun ExerciseWorkoutCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 2. Badges Row (Muscle Group + Session Status)
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = IceCyanContainer
-                ) {
-                    Text(
-                        text = muscleTitleUk,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = IceCyanPrimary,
-                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
-                    )
+            // 2. Badges Row (Muscle Groups + Session Status)
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                targetMuscles.forEach { mg ->
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = IceCyanContainer
+                    ) {
+                        Text(
+                            text = mg.displayNameUk,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = IceCyanPrimary,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
                 }
 
                 val statusLabel = when {
@@ -1346,7 +1422,8 @@ private fun WorkoutRestTimerBar(
     onStartRest: () -> Unit,
     onAdd15s: () -> Unit,
     onMinus15s: () -> Unit,
-    onSkipRest: () -> Unit
+    onSkipRest: () -> Unit,
+    isCompoundExercise: Boolean = true
 ) {
     val displayedRemaining = if (isRestActive) secondsLeft else preferredDuration
     val displayedTotal = if (isRestActive) totalSeconds.coerceAtLeast(1) else preferredDuration.coerceAtLeast(1)
@@ -1374,7 +1451,7 @@ private fun WorkoutRestTimerBar(
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                 .border(1.dp, if (isDark) Color(0xFF22303A) else MaterialTheme.colorScheme.outline, cardShape)
                 .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // Top Row: ВІДПОЧИНОК 1:12 / 1:30  |  [−15] [+15] [⏭]
             Row(
@@ -1454,32 +1531,92 @@ private fun WorkoutRestTimerBar(
                     .clip(CircleShape)
             )
 
-            // 4 Presets Row (45 с | 60 с | 90 с | 120 с)
+            // Evidence-based Presets Row (60 с | 90 с | 2 хв | 3 хв | 4 хв | 5 хв)
+            val restPresets = listOf(
+                60 to "60 с",
+                90 to "90 с",
+                120 to "2 хв",
+                180 to "3 хв",
+                240 to "4 хв",
+                300 to "5 хв"
+            )
+
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                listOf(45, 60, 90, 120).forEach { preset ->
+                restPresets.forEach { (preset, label) ->
                     val isSelected = preferredDuration == preset
+                    val isRecommended = if (isCompoundExercise) preset in 120..180 else preset in 60..90
                     Surface(
                         onClick = { onSelectDuration(preset) },
                         shape = RoundedCornerShape(12.dp),
-                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                        border = if (isSelected) BorderStroke(1.dp, IceCyanContainerBorder) else null,
+                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else if (isDark) Color(0xFF161F25) else MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(
+                            1.dp,
+                            if (isSelected) IceCyanContainerBorder else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                        ),
                         modifier = Modifier
-                            .weight(1f)
-                            .height(40.dp)
+                            .height(38.dp)
                             .testTag("rest_preset_${preset}s")
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            if (isRecommended && !isSelected) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(IceCyanPrimary.copy(alpha = 0.8f))
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                            }
                             Text(
-                                text = "$preset с",
-                                fontSize = 14.sp,
+                                text = label,
+                                fontSize = 13.sp,
                                 fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
+                }
+            }
+
+            // Scientific recommendation note
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = if (isDark) Color(0xFF101C20) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                border = BorderStroke(1.dp, if (isDark) Color(0xFF1C343B) else MaterialTheme.colorScheme.outlineVariant),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Lightbulb,
+                        contentDescription = null,
+                        tint = IceCyanPrimary,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        text = if (isCompoundExercise) {
+                            "Базова вправа (Schoenfeld, 2016): рекомендовано 2–3+ хв відпочинку для максимальної сили та гіпертрофії"
+                        } else {
+                            "Ізоляція: 1–2 хв достатньо для повного локального відновлення м'язових волокон"
+                        },
+                        fontSize = 10.sp,
+                        lineHeight = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }

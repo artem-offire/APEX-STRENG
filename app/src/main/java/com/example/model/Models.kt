@@ -20,28 +20,34 @@ enum class MuscleGroup(val displayNameUk: String, val displayNameEn: String) {
     FOREARMS("Передпліччя", "Forearms"),
     GLUTES("Сідниці", "Glutes"),
     CALVES("Литки", "Calves"),
-    ABS("Прес (Коре)", "Abs / Core");
+    ABS("Прес (Коре)", "Abs / Core"),
+    OTHER("Інше", "Other");
 
     // Standard baseline volume landmarks (weekly sets) per Dr. Mike Israetel
     val baselineMv: Int get() = when (this) {
         CHEST -> 6; BACK -> 8; QUADS -> 6; HAMSTRINGS -> 4
         SHOULDERS -> 6; BICEPS -> 4; TRICEPS -> 4; FOREARMS -> 4; GLUTES -> 4; CALVES -> 6; ABS -> 0
+        OTHER -> 0
     }
     val baselineMev: Int get() = when (this) {
         CHEST -> 10; BACK -> 12; QUADS -> 8; HAMSTRINGS -> 6
         SHOULDERS -> 8; BICEPS -> 8; TRICEPS -> 6; FOREARMS -> 6; GLUTES -> 6; CALVES -> 8; ABS -> 4
+        OTHER -> 0
     }
     val baselineMavMin: Int get() = when (this) {
         CHEST -> 12; BACK -> 14; QUADS -> 12; HAMSTRINGS -> 10
         SHOULDERS -> 12; BICEPS -> 10; TRICEPS -> 10; FOREARMS -> 8; GLUTES -> 8; CALVES -> 12; ABS -> 8
+        OTHER -> 0
     }
     val baselineMavMax: Int get() = when (this) {
         CHEST -> 20; BACK -> 22; QUADS -> 18; HAMSTRINGS -> 16
         SHOULDERS -> 20; BICEPS -> 18; TRICEPS -> 16; FOREARMS -> 14; GLUTES -> 14; CALVES -> 18; ABS -> 16
+        OTHER -> 0
     }
     val baselineMrv: Int get() = when (this) {
         CHEST -> 24; BACK -> 26; QUADS -> 22; HAMSTRINGS -> 20
         SHOULDERS -> 24; BICEPS -> 22; TRICEPS -> 20; FOREARMS -> 18; GLUTES -> 18; CALVES -> 22; ABS -> 20
+        OTHER -> 0
     }
 
     companion object {
@@ -51,8 +57,21 @@ enum class MuscleGroup(val displayNameUk: String, val displayNameEn: String) {
             return values().find {
                 it.name == upper ||
                 it.displayNameUk.equals(trimmed, ignoreCase = true) ||
-                (it == FOREARMS && (upper.contains("ПРЕДПЛІЧ") || upper.contains("ПЕРЕДПЛІЧ") || upper.contains("FOREARM")))
+                (it == FOREARMS && (upper.contains("ПРЕДПЛІЧ") || upper.contains("ПЕРЕДПЛІЧ") || upper.contains("FOREARM"))) ||
+                (it == OTHER && (upper == "ІНШЕ" || upper == "РИЗНЕ" || upper == "РІЗНЕ" || upper == "OTHER" || upper == "MISC"))
             }
+        }
+
+        fun parseMuscleGroups(muscleGroupString: String?): List<MuscleGroup> {
+            if (muscleGroupString.isNullOrBlank()) return emptyList()
+            return muscleGroupString.split(",")
+                .mapNotNull { fromStringOrNull(it.trim()) }
+                .distinct()
+        }
+
+        fun formatMuscleGroupsUk(muscleGroupString: String?): String {
+            val groups = parseMuscleGroups(muscleGroupString)
+            return if (groups.isEmpty()) (muscleGroupString ?: "") else groups.joinToString(", ") { it.displayNameUk }
         }
     }
 }

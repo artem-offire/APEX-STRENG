@@ -120,6 +120,7 @@ fun formatMuscleGroupUk(muscle: String): String = when (muscle.trim().uppercase(
     "CALVES" -> "Литки"
     "ABS" -> "Прес"
     "LEGS" -> "Ноги"
+    "OTHER", "ІНШЕ" -> "Інше"
     else -> muscle
 }
 
