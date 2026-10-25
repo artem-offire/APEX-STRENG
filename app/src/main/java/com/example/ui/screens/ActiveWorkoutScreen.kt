@@ -52,6 +52,7 @@ import com.example.data.ExerciseEntity
 import com.example.data.WorkoutSetEntity
 import com.example.engine.DoubleProgressionEngine
 import com.example.model.MuscleGroup
+import com.example.model.MuscleHead
 import com.example.ui.ApexViewModel
 import com.example.ui.WorkoutExerciseWithSets
 import com.example.ui.components.ExerciseSubstitutionModal
@@ -71,6 +72,7 @@ fun ActiveWorkoutScreen(
     val elapsedSeconds by viewModel.activeWorkoutElapsedSeconds.collectAsState()
     val allSessions by viewModel.allSessions.collectAsState()
     val allExercises by viewModel.allExercises.collectAsState()
+    val advancedMuscleMode by viewModel.advancedMuscleMode.collectAsState()
     val restSecondsLeft by viewModel.restSecondsLeft.collectAsState()
     val restTotalSeconds by viewModel.restTotalSeconds.collectAsState()
     val isRestActive by viewModel.isRestActive.collectAsState()
@@ -608,6 +610,7 @@ fun ActiveWorkoutScreen(
     if (showAddExerciseDialog) {
         AddWorkoutExercisePickerDialog(
             allExercises = allExercises,
+            advancedMode = advancedMuscleMode,
             onSelectExercise = { exName, muscleGroup, weightKg, repsCount ->
                 viewModel.addCustomExerciseToWorkout(
                     sessionId = sessionId,
@@ -1778,24 +1781,39 @@ private fun RirScaleInfoModal(onDismiss: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AddWorkoutExercisePickerDialog(
     allExercises: List<ExerciseEntity>,
+    advancedMode: Boolean,
     onSelectExercise: (String, String, Double, Int) -> Unit,
     onDeleteExercise: (ExerciseEntity) -> Unit,
     onDismiss: () -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedMuscle by remember { mutableStateOf<MuscleGroup?>(null) }
+    var selectedHead by remember { mutableStateOf<MuscleHead?>(null) }
     var customExerciseName by remember { mutableStateOf("") }
     var initialWeightInput by remember { mutableStateOf("60") }
     var initialRepsInput by remember { mutableStateOf("10") }
 
-    val filtered = remember(allExercises, searchQuery, selectedMuscle) {
+    val availableHeads = remember(selectedMuscle, advancedMode) {
+        if (advancedMode) selectedMuscle?.let { MuscleHead.headsFor(it) }.orEmpty() else emptyList()
+    }
+    val activeHead = selectedHead.takeIf { advancedMode && it in availableHeads }
+
+    val headsByExercise = remember(allExercises) {
+        allExercises.associate { ex ->
+            ex.id to MuscleHead.forExercise(ex.name, runCatching { MuscleGroup.valueOf(ex.muscleGroup) }.getOrNull())
+        }
+    }
+
+    val filtered = remember(allExercises, searchQuery, selectedMuscle, activeHead, headsByExercise) {
         allExercises.filter { ex ->
             val matchesMuscle = selectedMuscle == null || ex.muscleGroup == selectedMuscle?.name
+            val matchesHead = activeHead == null || headsByExercise[ex.id].orEmpty().contains(activeHead)
             val matchesSearch = searchQuery.isBlank() || ex.name.contains(searchQuery, ignoreCase = true)
-            matchesMuscle && matchesSearch
+            matchesMuscle && matchesHead && matchesSearch
         }
     }
 
@@ -1821,6 +1839,23 @@ private fun AddWorkoutExercisePickerDialog(
                         fontSize = 18.sp,
                         fontWeight = FontWeight.ExtraBold
                     )
+                    if (advancedMode) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Surface(
+                            shape = RoundedCornerShape(7.dp),
+                            color = IceCyanContainer,
+                            border = BorderStroke(1.dp, IceCyanContainerBorder)
+                        ) {
+                            Text(
+                                text = "Продвинутий",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = IceCyanPrimary,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
                     IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
                         Icon(Icons.Default.Close, contentDescription = "Закрити")
                     }
@@ -1857,10 +1892,23 @@ private fun AddWorkoutExercisePickerDialog(
                     MuscleGroup.values().forEach { mg ->
                         FilterChip(
                             selected = selectedMuscle == mg,
-                            onClick = { selectedMuscle = if (selectedMuscle == mg) null else mg },
+                            onClick = {
+                                selectedMuscle = if (selectedMuscle == mg) null else mg
+                                selectedHead = null
+                            },
                             label = { Text(mg.displayNameUk, fontSize = 11.sp) }
                         )
                     }
+                }
+
+                if (availableHeads.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    MuscleHeadSelector(
+                        groupName = selectedMuscle?.displayNameUk?.substringBefore(" (").orEmpty(),
+                        heads = availableHeads,
+                        selected = activeHead,
+                        onSelect = { selectedHead = it }
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -1924,11 +1972,36 @@ private fun AddWorkoutExercisePickerDialog(
                                     val mName = runCatching {
                                         MuscleGroup.valueOf(ex.muscleGroup).displayNameUk
                                     }.getOrDefault(ex.muscleGroup)
-                                    Text(
-                                        text = mName,
-                                        fontSize = 11.sp,
-                                        color = IceCyanPrimary
-                                    )
+                                    val exHeads = headsByExercise[ex.id].orEmpty()
+                                    if (advancedMode && exHeads.isNotEmpty()) {
+                                        FlowRow(
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                                            modifier = Modifier.padding(top = 3.dp)
+                                        ) {
+                                            exHeads.forEach { head ->
+                                                val hit = head == activeHead
+                                                Surface(
+                                                    shape = RoundedCornerShape(5.dp),
+                                                    color = if (hit) IceCyanPrimary else IceCyanContainer
+                                                ) {
+                                                    Text(
+                                                        text = "${mName.substringBefore(" (")} · ${head.displayNameUk}",
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = if (hit) IceCyanOnPrimary else Color(0xFF5FD4C4),
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        Text(
+                                            text = mName,
+                                            fontSize = 11.sp,
+                                            color = IceCyanPrimary
+                                        )
+                                    }
                                 }
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     if (ex.instructionsUk == "Власна вправа") {
@@ -1979,6 +2052,69 @@ private fun AddWorkoutExercisePickerDialog(
                     Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text("Додати до тренування", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MuscleHeadSelector(
+    groupName: String,
+    heads: List<MuscleHead>,
+    selected: MuscleHead?,
+    onSelect: (MuscleHead?) -> Unit
+) {
+    val isDark = apexIsDark()
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = if (isDark) Color(0xFF0F1C1E) else IceCyanContainer.copy(alpha = 0.08f),
+        border = BorderStroke(1.dp, if (isDark) Color(0xFF1F3E42) else IceCyanContainerBorder.copy(alpha = 0.3f)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("muscle_head_selector")
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = "ПУЧОК · ${groupName.uppercase()}",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 0.6.sp,
+                color = Color(0xFF5FBFB0)
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                (listOf<MuscleHead?>(null) + heads).forEach { head ->
+                    val isOn = head == selected
+                    Surface(
+                        onClick = { onSelect(head) },
+                        shape = RoundedCornerShape(17.dp),
+                        color = if (isOn) IceCyanPrimary else Color.Transparent,
+                        border = if (isOn) null else BorderStroke(1.dp, IceCyanContainerBorder),
+                        modifier = Modifier.height(34.dp)
+                    ) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.padding(horizontal = 12.dp)
+                        ) {
+                            Text(
+                                text = head?.displayNameUk ?: "Усі пучки",
+                                fontSize = 12.sp,
+                                fontWeight = if (isOn) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                color = when {
+                                    isOn -> IceCyanOnPrimary
+                                    isDark -> IceCyanOnContainer
+                                    else -> MaterialTheme.colorScheme.onSurface
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }

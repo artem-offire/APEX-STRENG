@@ -3,6 +3,7 @@ package com.example.ui.screens
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -20,10 +21,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
+import com.example.model.MuscleGroup
+import com.example.model.MuscleHead
 import com.example.model.ScienceArticle
 import com.example.model.ScienceKnowledgeBase
 import com.example.service.RestTimerAudioHelper
@@ -47,6 +51,7 @@ fun ProfileTab(viewModel: ApexViewModel) {
     val allExercises by viewModel.allExercises.collectAsState()
     val gamificationState by viewModel.gamificationState.collectAsState()
     val readScienceArticleIds by viewModel.readScienceArticleIds.collectAsState()
+    val advancedMuscleMode by viewModel.advancedMuscleMode.collectAsState()
 
     var showVolumeModal by remember { mutableStateOf(false) }
     var showEditNicknameDialog by remember { mutableStateOf(false) }
@@ -334,7 +339,82 @@ fun ProfileTab(viewModel: ApexViewModel) {
                                 modifier = Modifier.size(20.dp)
                             )
                         }
+
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.padding(start = 62.dp)
+                        )
+
+                        // Row 3: Продвинутий режим (поділ мʼязів на пучки)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .toggleable(
+                                    value = advancedMuscleMode,
+                                    role = Role.Switch,
+                                    onValueChange = { viewModel.setAdvancedMuscleMode(it) }
+                                )
+                                .heightIn(min = 72.dp)
+                                .padding(horizontal = 14.dp, vertical = 12.dp)
+                                .testTag("advanced_muscle_mode_toggle"),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (advancedMuscleMode) IceCyanPrimary else MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.AccountTree,
+                                        contentDescription = null,
+                                        tint = if (advancedMuscleMode) IceCyanOnPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Продвинутий режим",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Детальний поділ мʼязів на пучки",
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (advancedMuscleMode) IceCyanPrimary else MaterialTheme.colorScheme.surfaceVariant
+                            ) {
+                                Text(
+                                    text = if (advancedMuscleMode) "Увімкнено" else "Вимкнено",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = if (advancedMuscleMode) IceCyanOnPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                )
+                            }
+                        }
                     }
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+                if (advancedMuscleMode) {
+                    AdvancedMuscleModeInfoCard()
+                } else {
+                    Text(
+                        text = "Зараз мʼязи обираються загальними групами: «Дельти», «Біцепс», «Спина». Увімкніть продвинутий режим, щоб розділити їх на окремі пучки.",
+                        fontSize = 13.sp,
+                        lineHeight = 19.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
                 }
             }
         }
@@ -958,5 +1038,108 @@ fun ProfileTab(viewModel: ApexViewModel) {
             totalXp = gamificationState.currentXp,
             onDismiss = { showAchievementsModal = false }
         )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AdvancedMuscleModeInfoCard() {
+    val isDark = apexIsDark()
+    val heads = { group: MuscleGroup -> MuscleHead.headsFor(group).map { it.displayNameUk } }
+    val armHeads = MuscleHead.headsFor(MuscleGroup.BICEPS).map {
+        if (it == MuscleHead.BRACHIALIS) it.displayNameUk else "Біцепс: ${it.displayNameUk.lowercase()}"
+    } + MuscleHead.headsFor(MuscleGroup.TRICEPS).map { "Тріцепс: ${it.displayNameUk.lowercase()}" }
+    val groups = listOf(
+        "Дельти" to heads(MuscleGroup.SHOULDERS),
+        "Груди" to heads(MuscleGroup.CHEST),
+        "Спина" to heads(MuscleGroup.BACK),
+        "Руки" to armHeads
+    )
+
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = if (isDark) Color(0xFF0F1C1E) else Color(0xFFE3F7F4),
+        border = BorderStroke(1.dp, if (isDark) Color(0xFF1F3E42) else Color(0xFFBFE6E0)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("advanced_muscle_mode_info")
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "${MuscleHead.advancedSelectableCount}",
+                    fontFamily = Unbounded,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 30.sp,
+                    lineHeight = 30.sp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = "Доступно більше мʼязів для вибору",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Замість 11 загальних груп",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Text(
+                text = "Програма рахує обсяг і відновлення окремо для кожного пучка. Наприклад, жим над головою вантажить передню дельту, а розведення в сторони середню.",
+                fontSize = 13.sp,
+                lineHeight = 19.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                groups.forEach { (name, parts) ->
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = name,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            parts.forEach { part ->
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    border = BorderStroke(1.dp, IceCyanContainerBorder)
+                                ) {
+                                    Text(
+                                        text = part,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isDark) IceCyanOnContainer else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Text(
+                text = "І ще 6 груп: квадрицепси, задня поверхня стегна, сідниці, литки, прес, передпліччя",
+                fontSize = 12.sp,
+                color = TextMutedDark
+            )
+        }
     }
 }

@@ -343,6 +343,15 @@ class ApexViewModel(application: Application) : AndroidViewModel(application) {
         _inactivityNotice.value = null
     }
 
+    // Продвинутий режим: детальний поділ мʼязів на пучки (persisted in userPrefs)
+    private val _advancedMuscleMode = MutableStateFlow(userPrefs.getBoolean("advanced_muscle_mode", false))
+    val advancedMuscleMode: StateFlow<Boolean> = _advancedMuscleMode.asStateFlow()
+
+    fun setAdvancedMuscleMode(enabled: Boolean) {
+        _advancedMuscleMode.value = enabled
+        userPrefs.edit().putBoolean("advanced_muscle_mode", enabled).apply()
+    }
+
     fun toggleDarkMode() {
         val next = when (isDarkThemeOverride.value) {
             true -> false

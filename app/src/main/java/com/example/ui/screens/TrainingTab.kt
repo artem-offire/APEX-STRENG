@@ -660,19 +660,21 @@ fun TrainingTab(
                     imageVector = Icons.Default.DeleteOutline,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             },
             title = {
                 Text(
                     text = "Видалити тренування?",
+                    fontFamily = Unbounded,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleMedium
+                    fontSize = 24.sp,
+                    lineHeight = 32.sp
                 )
             },
             text = {
                 Text(
-                    text = "Ви впевнені, що хочете видалити «${session.title}» з історії? Цю дію неможливо скасувати.",
+                    text = "Ви дійсно бажаєте видалити «${session.title}»? Цю дію неможливо скасувати.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -687,22 +689,19 @@ fun TrainingTab(
                         containerColor = MaterialTheme.colorScheme.error,
                         contentColor = MaterialTheme.colorScheme.onError
                     ),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(20.dp),
                     modifier = Modifier.testTag("confirm_delete_history_session_btn")
                 ) {
                     Text("Видалити", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                OutlinedButton(
-                    onClick = { sessionToDeleteFromHistory = null },
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Скасувати")
+                TextButton(onClick = { sessionToDeleteFromHistory = null }) {
+                    Text("Скасувати", fontWeight = FontWeight.Bold)
                 }
             },
-            shape = RoundedCornerShape(18.dp),
-            containerColor = MaterialTheme.colorScheme.surface
+            shape = RoundedCornerShape(28.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
     }
 }
