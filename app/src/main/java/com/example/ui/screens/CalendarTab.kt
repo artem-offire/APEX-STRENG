@@ -36,6 +36,22 @@ import com.example.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
 
+enum class GymTimePeriod(val shortLabel: String, val fullLabel: String) {
+    DAY("День", "день"),
+    WEEK("Тижд", "тиждень"),
+    MONTH("Міс", "місяць")
+}
+
+fun formatGymMinutesUk(minutes: Long): String {
+    return if (minutes >= 60) {
+        val h = minutes / 60
+        val m = minutes % 60
+        if (m == 0L) "${h}г" else "${h}г ${m}хв"
+    } else {
+        "$minutes хв"
+    }
+}
+
 @Composable
 fun CalendarTab(
     viewModel: ApexViewModel,
@@ -55,12 +71,18 @@ fun CalendarTab(
     var displayedMonth by remember { mutableStateOf(todayMonth) }
     var selectedDateKey by remember { mutableStateOf(todayKey) }
     var showScheduleDialog by remember { mutableStateOf(false) }
+    var sessionToDeleteInCalendar by remember { mutableStateOf<WorkoutSessionEntity?>(null) }
+    var selectedGymTimePeriod by remember { mutableStateOf(GymTimePeriod.MONTH) }
 
     val sessionsByDate = remember(allSessions) {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
         allSessions.groupBy { session ->
             dateFormat.format(Date(session.dateTimestamp))
         }
+    }
+
+    val selectedDaySessions = remember(sessionsByDate, selectedDateKey) {
+        sessionsByDate[selectedDateKey] ?: emptyList()
     }
 
     val currentMonthSessions = remember(allSessions, displayedYear, displayedMonth) {
@@ -78,6 +100,40 @@ fun CalendarTab(
     }
     val totalMinutesMonth = remember(currentMonthSessions) {
         currentMonthSessions.filter { it.isCompleted }.sumOf { (it.durationSeconds / 60).coerceAtLeast(1) }
+    }
+
+    val totalMinutesDay = remember(selectedDaySessions) {
+        selectedDaySessions.filter { it.isCompleted }.sumOf { (it.durationSeconds / 60).coerceAtLeast(1) }
+    }
+
+    val totalMinutesWeek = remember(allSessions, selectedDateKey) {
+        try {
+            val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+            val selectedDate = sdf.parse(selectedDateKey) ?: Date()
+            val cal = Calendar.getInstance().apply {
+                firstDayOfWeek = Calendar.MONDAY
+                time = selectedDate
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
+            val diffToMonday = if (dayOfWeek == Calendar.SUNDAY) -6 else Calendar.MONDAY - dayOfWeek
+            cal.add(Calendar.DAY_OF_MONTH, diffToMonday)
+            val weekStartMs = cal.timeInMillis
+
+            cal.add(Calendar.DAY_OF_MONTH, 6)
+            cal.set(Calendar.HOUR_OF_DAY, 23)
+            cal.set(Calendar.MINUTE, 59)
+            cal.set(Calendar.SECOND, 59)
+            val weekEndMs = cal.timeInMillis
+
+            allSessions.filter { it.isCompleted && it.dateTimestamp in weekStartMs..weekEndMs }
+                .sumOf { (it.durationSeconds / 60).coerceAtLeast(1) }
+        } catch (e: Exception) {
+            0L
+        }
     }
 
     val monthNamesUk = listOf(
@@ -113,8 +169,6 @@ fun CalendarTab(
         }
         list
     }
-
-    val selectedDaySessions = sessionsByDate[selectedDateKey] ?: emptyList()
 
     LazyColumn(
         modifier = Modifier
@@ -205,7 +259,7 @@ fun CalendarTab(
             }
         }
 
-        // 2. Three Month Stat Cards (виконано, заплановано, у залі)
+        // 2. Three Month Stat Cards (виконано, заплановано, у залі з перемикачем День / Тижд / Міс)
         item(key = "calendar_stats_row") {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -215,10 +269,10 @@ fun CalendarTab(
                     shape = RoundedCornerShape(16.dp),
                     color = MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(0.9f)
                 ) {
                     Column(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
                         horizontalAlignment = Alignment.Start
                     ) {
                         Text(
@@ -240,10 +294,10 @@ fun CalendarTab(
                     shape = RoundedCornerShape(16.dp),
                     color = MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(0.9f)
                 ) {
                     Column(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
                         horizontalAlignment = Alignment.Start
                     ) {
                         Text(
@@ -261,31 +315,68 @@ fun CalendarTab(
                     }
                 }
 
+                val (displayedMinutes, periodSubtitle) = when (selectedGymTimePeriod) {
+                    GymTimePeriod.DAY -> totalMinutesDay to "за день"
+                    GymTimePeriod.WEEK -> totalMinutesWeek to "за тиждень"
+                    GymTimePeriod.MONTH -> totalMinutesMonth to "за місяць"
+                }
+
                 Surface(
                     shape = RoundedCornerShape(16.dp),
                     color = MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                    modifier = Modifier.weight(1.1f)
+                    modifier = Modifier
+                        .weight(1.35f)
+                        .testTag("gym_time_card")
                 ) {
                     Column(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
                         horizontalAlignment = Alignment.Start
                     ) {
+                        // Segmented control [День | Тижд | Міс]
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.surfaceContainer)
+                                .padding(2.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            GymTimePeriod.values().forEach { period ->
+                                val isSelected = period == selectedGymTimePeriod
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(if (isSelected) IceCyanPrimary else Color.Transparent)
+                                        .clickable { selectedGymTimePeriod = period }
+                                        .padding(vertical = 3.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = period.shortLabel,
+                                        fontSize = 10.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) IceCyanOnPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
                         Text(
-                            text = if (totalMinutesMonth >= 60) {
-                                "${totalMinutesMonth / 60}г ${totalMinutesMonth % 60}хв"
-                            } else {
-                                "$totalMinutesMonth хв"
-                            },
-                            style = ApexBigNumber.copy(fontSize = if (totalMinutesMonth >= 60) 17.sp else 22.sp),
+                            text = formatGymMinutesUk(displayedMinutes),
+                            style = ApexBigNumber.copy(fontSize = if (displayedMinutes >= 60) 15.sp else 19.sp),
                             maxLines = 1,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "у залі",
-                            fontSize = 12.sp,
+                            text = "у залі ($periodSubtitle)",
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -462,11 +553,43 @@ fun CalendarTab(
                         fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onBackground
                     )
-                    Text(
-                        text = countLabel,
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = countLabel,
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (totalMinutesDay > 0) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = IceCyanPrimary.copy(alpha = 0.15f),
+                                border = BorderStroke(1.dp, IceCyanPrimary.copy(alpha = 0.35f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.AccessTime,
+                                        contentDescription = null,
+                                        tint = IceCyanPrimary,
+                                        modifier = Modifier.size(11.dp)
+                                    )
+                                    Text(
+                                        text = "${formatGymMinutesUk(totalMinutesDay)} у залі",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = IceCyanPrimary
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Surface(
@@ -621,7 +744,7 @@ fun CalendarTab(
                                         },
                                         onClick = {
                                             menuExpanded = false
-                                            viewModel.deleteSession(session.id)
+                                            sessionToDeleteInCalendar = session
                                         }
                                     )
                                 }
@@ -711,6 +834,54 @@ fun CalendarTab(
                 }
             }
         }
+    }
+
+    sessionToDeleteInCalendar?.let { targetSession ->
+        AlertDialog(
+            onDismissRequest = { sessionToDeleteInCalendar = null },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.DeleteOutline,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = {
+                Text(
+                    text = "Видалити тренування?",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Ви дійсно бажаєте видалити «${targetSession.title}»? Цю дію неможливо скасувати."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val id = targetSession.id
+                        sessionToDeleteInCalendar = null
+                        viewModel.deleteSession(id)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    ),
+                    modifier = Modifier.testTag("confirm_delete_session_dialog_btn")
+                ) {
+                    Text("Видалити")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { sessionToDeleteInCalendar = null },
+                    modifier = Modifier.testTag("cancel_delete_session_dialog_btn")
+                ) {
+                    Text("Скасувати")
+                }
+            }
+        )
     }
 
     if (showScheduleDialog) {

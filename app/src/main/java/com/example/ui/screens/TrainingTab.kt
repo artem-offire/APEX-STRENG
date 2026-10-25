@@ -1,8 +1,17 @@
 package com.example.ui.screens
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.zIndex
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
@@ -41,7 +50,11 @@ import com.example.data.WorkoutSessionEntity
 import com.example.ui.ApexViewModel
 import com.example.ui.components.MobilityTimerModal
 import com.example.ui.components.MuscleRecoveryCard
+import com.example.ui.components.NotificationsModal
 import com.example.ui.theme.*
+import com.example.engine.FrequentWorkoutEngine
+import com.example.model.FrequentWorkoutItem
+import com.example.model.ReadinessBadgeType
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -54,26 +67,29 @@ fun TrainingTab(
 ) {
     val allSessions by viewModel.allSessions.collectAsState()
     val allCompletedSets by viewModel.allCompletedSets.collectAsState()
+    val allCatalogExercises by viewModel.allExercises.collectAsState()
     val recoverySummary by viewModel.muscleRecoverySummary.collectAsState()
     val recoveryNotificationsEnabled by viewModel.recoveryNotificationsEnabled.collectAsState()
+    val notifications by viewModel.appNotifications.collectAsState()
+    val unreadNotificationsCount = remember(notifications) { notifications.count { !it.isRead } }
 
     var workoutTitleInput by remember { mutableStateOf("") }
     var showMobilityModal by remember { mutableStateOf<Boolean?>(null) } // true=warmup, false=cooldown
     var isHistoryExpanded by remember { mutableStateOf(false) }
+    var showNotificationsModal by remember { mutableStateOf(false) }
+    var sessionToDeleteFromHistory by remember { mutableStateOf<WorkoutSessionEntity?>(null) }
 
     val completedSessions = remember(allSessions) {
         allSessions.filter { it.isCompleted }.sortedByDescending { it.dateTimestamp }
     }
 
-    val frequentWorkouts = remember(completedSessions) {
-        val uniqueMap = mutableMapOf<String, WorkoutSessionEntity>()
-        for (session in completedSessions) {
-            val cleanTitle = session.title.trim()
-            if (cleanTitle.isNotEmpty() && !uniqueMap.containsKey(cleanTitle)) {
-                uniqueMap[cleanTitle] = session
-            }
-        }
-        uniqueMap.values.take(6).toList()
+    val smartFrequentWorkouts = remember(completedSessions, allCompletedSets, recoverySummary, allCatalogExercises) {
+        FrequentWorkoutEngine.buildFrequentWorkouts(
+            completedSessions = completedSessions,
+            allCompletedSets = allCompletedSets,
+            recoverySummary = recoverySummary,
+            allCatalogExercises = allCatalogExercises
+        )
     }
 
     val currentDateText = remember {
@@ -92,90 +108,219 @@ fun TrainingTab(
         viewModel.startCustomWorkout(finalTitle)
     }
 
-    LazyColumn(
-        state = listState,
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(top = 20.dp, bottom = 96.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
+    var topBannerText by remember { mutableStateOf<String?>(null) }
+    var topBannerIsOn by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+    var hideBannerJob by remember { mutableStateOf<Job?>(null) }
+
+    val showNotificationToggleBanner: (Boolean) -> Unit = { enabled ->
+        topBannerIsOn = enabled
+        topBannerText = if (enabled) "Сповіщення увімкнено" else "Сповіщення вимкнено"
+        hideBannerJob?.cancel()
+        hideBannerJob = coroutineScope.launch {
+            delay(2500)
+            topBannerText = null
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(top = 20.dp, bottom = 96.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
         // 1. Top Branding & Title
         item(key = "title_section") {
-            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
-                Text(
-                    text = "APEX",
-                    style = ApexSectionLabel.copy(fontFamily = Unbounded, fontWeight = FontWeight.Bold, fontSize = 13.sp, letterSpacing = 2.3.sp),
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = currentDateText,
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = "Тренування",
-                    style = ApexScreenTitle.copy(fontSize = 28.sp, lineHeight = 32.sp),
-                    color = MaterialTheme.colorScheme.onBackground
-                )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "APEX",
+                        style = ApexSectionLabel.copy(fontFamily = Unbounded, fontWeight = FontWeight.Bold, fontSize = 13.sp, letterSpacing = 2.3.sp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = currentDateText,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "Тренування",
+                        style = ApexScreenTitle.copy(fontSize = 28.sp, lineHeight = 32.sp),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clickable { showNotificationsModal = true }
+                        .testTag("open_notifications_inbox_header_btn")
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = "Сповіщення програми",
+                            tint = if (unreadNotificationsCount > 0) IceCyanPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        if (unreadNotificationsCount > 0) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Color(0xFFF59E0B),
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(top = 8.dp, end = 8.dp)
+                                    .size(9.dp)
+                            ) {}
+                        }
+                    }
+                }
             }
         }
 
-        // 2. Frequent Workouts Section (ЧАСТІ ТРЕНУВАННЯ) — 3-column grid
+        // 2. Frequent Workouts Section (ЧАСТІ ТРЕНУВАННЯ) — інтелектуальне ранжування за готовністю м'язів
         item(key = "frequent_workouts_section") {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = "ЧАСТІ ТРЕНУВАННЯ",
-                    style = ApexSectionLabel,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                )
-                if (frequentWorkouts.isNotEmpty()) {
-                    frequentWorkouts.withIndex().chunked(3).forEach { rowItems ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "ЧАСТІ ТРЕНУВАННЯ",
+                        style = ApexSectionLabel,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (recoverySummary.readyTodayMuscleGroups.isNotEmpty()) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0xFFF59E0B).copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = "🔥 Свіжі сьогодні: ${recoverySummary.readyTodayMuscleGroups.size}",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFF59E0B),
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+
+                if (smartFrequentWorkouts.isNotEmpty()) {
+                    smartFrequentWorkouts.withIndex().chunked(2).forEach { rowItems ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            rowItems.forEach { (index, session) ->
+                            rowItems.forEach { (index, item) ->
+                                val borderColor = when (item.badgeType) {
+                                    ReadinessBadgeType.PEAK_TODAY -> Color(0xFFF59E0B).copy(alpha = 0.6f)
+                                    ReadinessBadgeType.FULLY_READY -> IceCyanPrimary.copy(alpha = 0.4f)
+                                    ReadinessBadgeType.RECOVERING -> MaterialTheme.colorScheme.outline
+                                }
+                                val badgeColor = when (item.badgeType) {
+                                    ReadinessBadgeType.PEAK_TODAY -> Color(0xFFF59E0B)
+                                    ReadinessBadgeType.FULLY_READY -> Color(0xFF10B981)
+                                    ReadinessBadgeType.RECOVERING -> MaterialTheme.colorScheme.onSurfaceVariant
+                                }
+
                                 Surface(
-                                    onClick = { viewModel.repeatWorkout(session.id) },
-                                    shape = RoundedCornerShape(12.dp),
+                                    onClick = { viewModel.startFrequentWorkout(item) },
+                                    shape = RoundedCornerShape(14.dp),
                                     color = MaterialTheme.colorScheme.surface,
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                    border = BorderStroke(1.dp, borderColor),
                                     modifier = Modifier
                                         .weight(1f)
-                                        .height(44.dp)
+                                        .heightIn(min = 66.dp)
                                         .testTag("frequent_workout_chip_$index")
                                 ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 8.dp),
-                                        horizontalArrangement = Arrangement.Center,
-                                        verticalAlignment = Alignment.CenterVertically
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                                        verticalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Replay,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(15.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = session.title,
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                Icon(
+                                                    imageVector = if (item.isFromHistory) Icons.Default.Replay else Icons.Default.Bolt,
+                                                    contentDescription = null,
+                                                    tint = badgeColor,
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text(
+                                                    text = item.title,
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.height(4.dp))
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = item.subtitle,
+                                                fontSize = 11.sp,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            Surface(
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = badgeColor.copy(alpha = 0.12f)
+                                            ) {
+                                                Text(
+                                                    text = item.badgeText,
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = badgeColor,
+                                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
-                            repeat(3 - rowItems.size) { Spacer(modifier = Modifier.weight(1f)) }
+                            if (rowItems.size < 2) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
                         }
                     }
                 } else {
@@ -197,7 +342,7 @@ fun TrainingTab(
                                 modifier = Modifier.size(18.dp)
                             )
                             Text(
-                                text = "Тут будуть ваші завершені тренування для швидкого повторення",
+                                text = "Тут будуть ваші тренування, адаптовані до відновлення м'язів",
                                 style = MaterialTheme.typography.bodySmall,
                                 fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -326,8 +471,11 @@ fun TrainingTab(
             MuscleRecoveryCard(
                 summary = recoverySummary,
                 notificationsEnabled = recoveryNotificationsEnabled,
+                unreadNotificationsCount = unreadNotificationsCount,
+                onOpenNotificationsModal = { showNotificationsModal = true },
                 onToggleNotifications = { enabled ->
                     viewModel.setRecoveryNotificationsEnabled(enabled)
+                    showNotificationToggleBanner(enabled)
                 },
                 onSendTestNotification = { muscle ->
                     viewModel.sendTestRecoveryNotification(muscle)
@@ -418,7 +566,7 @@ fun TrainingTab(
                                 WorkoutHistoryCard(
                                     session = session,
                                     onRepeat = { viewModel.repeatWorkout(session.id) },
-                                    onDelete = { viewModel.deleteSession(session.id) }
+                                    onDelete = { sessionToDeleteFromHistory = session }
                                 )
                             }
                         }
@@ -440,10 +588,121 @@ fun TrainingTab(
         }
     }
 
+    // Top notification heads-up popup banner
+    AnimatedVisibility(
+        visible = topBannerText != null,
+        enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+        exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
+        modifier = Modifier
+            .align(Alignment.TopCenter)
+            .statusBarsPadding()
+            .padding(top = 16.dp, start = 20.dp, end = 20.dp)
+            .zIndex(100f)
+    ) {
+        topBannerText?.let { text ->
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                border = BorderStroke(
+                    1.dp,
+                    if (topBannerIsOn) IceCyanPrimary.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outline
+                ),
+                shadowElevation = 8.dp,
+                modifier = Modifier
+                    .clickable { topBannerText = null }
+                    .testTag("top_notification_banner")
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        imageVector = if (topBannerIsOn) Icons.Default.NotificationsActive else Icons.Default.NotificationsOff,
+                        contentDescription = null,
+                        tint = if (topBannerIsOn) IceCyanPrimary else Color(0xFFF59E0B),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = text,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
+    }
+}
+
     showMobilityModal?.let { isWarmup ->
         MobilityTimerModal(
             isWarmup = isWarmup,
             onDismiss = { showMobilityModal = null }
+        )
+    }
+
+    if (showNotificationsModal) {
+        NotificationsModal(
+            notifications = notifications,
+            onMarkRead = { id -> viewModel.markNotificationRead(id) },
+            onMarkAllRead = { viewModel.markAllNotificationsRead() },
+            onClearAll = { viewModel.clearAllNotifications() },
+            onDismiss = { showNotificationsModal = false }
+        )
+    }
+
+    sessionToDeleteFromHistory?.let { session ->
+        AlertDialog(
+            onDismissRequest = { sessionToDeleteFromHistory = null },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.DeleteOutline,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "Видалити тренування?",
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium
+                )
+            },
+            text = {
+                Text(
+                    text = "Ви впевнені, що хочете видалити «${session.title}» з історії? Цю дію неможливо скасувати.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteSession(session.id)
+                        sessionToDeleteFromHistory = null
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.testTag("confirm_delete_history_session_btn")
+                ) {
+                    Text("Видалити", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { sessionToDeleteFromHistory = null },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Скасувати")
+                }
+            },
+            shape = RoundedCornerShape(18.dp),
+            containerColor = MaterialTheme.colorScheme.surface
         )
     }
 }

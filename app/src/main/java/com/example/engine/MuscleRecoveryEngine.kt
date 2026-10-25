@@ -23,6 +23,7 @@ data class MuscleGroupRecoveryStatus(
     val hoursRemaining: Double,
     val recoveryPercent: Int, // 0..100
     val state: RecoveryState,
+    val becameReadyToday: Boolean = false, // Відновлення завершилося в межах останніх 24 годин (пік суперкомпенсації)
     val nextOptimalWorkoutTimeMs: Long?,
     val formattedNextTimeUk: String,
     val formattedLastTrainedUk: String,
@@ -32,6 +33,7 @@ data class MuscleGroupRecoveryStatus(
 data class MuscleRecoverySummary(
     val statuses: List<MuscleGroupRecoveryStatus>,
     val readyMuscleGroups: List<MuscleGroup>,
+    val readyTodayMuscleGroups: List<MuscleGroup> = emptyList(), // М'язи, що стали доступні саме сьогодні
     val recoveringMuscleGroups: List<MuscleGroup>,
     val recommendedWorkoutTitleUk: String,
     val recommendationSummaryUk: String,
@@ -90,6 +92,10 @@ object MuscleRecoveryEngine {
             .filter { it.state == RecoveryState.RECOVERED }
             .map { it.muscleGroup }
 
+        val readyTodayGroups = statuses
+            .filter { it.becameReadyToday }
+            .map { it.muscleGroup }
+
         val recoveringGroups = statuses
             .filter { it.state != RecoveryState.RECOVERED }
             .sortedBy { it.hoursRemaining }
@@ -108,6 +114,7 @@ object MuscleRecoveryEngine {
         return MuscleRecoverySummary(
             statuses = statuses,
             readyMuscleGroups = readyGroups,
+            readyTodayMuscleGroups = readyTodayGroups,
             recoveringMuscleGroups = recoveringGroups,
             recommendedWorkoutTitleUk = recommendedTitle,
             recommendationSummaryUk = summaryText,
@@ -185,6 +192,8 @@ object MuscleRecoveryEngine {
             }
         }
 
+        val becameReadyToday = state == RecoveryState.RECOVERED && (elapsedHours - baseHours.toDouble()) in 0.0..24.0
+
         return MuscleGroupRecoveryStatus(
             muscleGroup = muscle,
             recoveryHoursNeeded = baseHours,
@@ -194,6 +203,7 @@ object MuscleRecoveryEngine {
             hoursRemaining = hoursRemaining,
             recoveryPercent = percent,
             state = state,
+            becameReadyToday = becameReadyToday,
             nextOptimalWorkoutTimeMs = nextTimeMs,
             formattedNextTimeUk = formattedNext,
             formattedLastTrainedUk = formattedLastTrained,

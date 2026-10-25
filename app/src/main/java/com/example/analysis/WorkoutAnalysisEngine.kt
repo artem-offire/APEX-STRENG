@@ -124,6 +124,12 @@ fun formatMuscleGroupUk(muscle: String): String = when (muscle.trim().uppercase(
     else -> muscle
 }
 
+fun getMusclePhysiologicalRecoveryHours(muscle: String): Int = when (muscle.trim().uppercase()) {
+    "BACK", "QUADS", "HAMSTRINGS", "GLUTES", "LEGS" -> 72
+    "CHEST", "SHOULDERS" -> 60
+    else -> 48
+}
+
 class MuscleRecoveryWarningRule : StartRule {
     override val ruleId = "rule_muscle_recovery_48h"
     override fun matches(ctx: StartContext): Boolean {
@@ -134,11 +140,14 @@ class MuscleRecoveryWarningRule : StartRule {
 
     override fun message(ctx: StartContext): StartReactionMessage {
         val overlap = ctx.currentWorkoutMuscles.intersect(ctx.recentTrainedMuscles48h.toSet())
-        val names = overlap.map { formatMuscleGroupUk(it) }.joinToString(", ")
+        val namesWithHours = overlap.joinToString(", ") { muscle ->
+            val hours = getMusclePhysiologicalRecoveryHours(muscle)
+            "${formatMuscleGroupUk(muscle)} (цикл: ${hours} год)"
+        }
         return StartReactionMessage(
             ruleId = ruleId,
             title = "М'язове відновлення",
-            body = "Увага: групи м'язів ($names) уже отримували навантаження менше 48 годин тому. Враховуйте накопичену втому та не працюйте в повну відмову.",
+            body = "Увага: групи м'язів $namesWithHours нещодавно тренувалися. Згідно з фізіологічною моделлю APEX, враховуйте накопичену втому та не працюйте в повну відмову.",
             iconEmoji = "⚠️",
             isWarning = true
         )
@@ -148,7 +157,7 @@ class MuscleRecoveryWarningRule : StartRule {
 class WorkloadSpikeRule : StartRule {
     override val ruleId = "rule_workload_spike"
     override fun matches(ctx: StartContext): Boolean =
-        ctx.acuteChronicRatio > 1.4
+        ctx.isScheduleFormed && ctx.acuteChronicRatio > 1.4
 
     override fun message(ctx: StartContext): StartReactionMessage {
         val percent = ((ctx.acuteChronicRatio - 1.0) * 100).toInt()
@@ -403,16 +412,25 @@ object WorkoutAnalysisEngine {
         completedSessions: List<WorkoutSessionEntity>,
         nowMs: Long = System.currentTimeMillis()
     ): Double {
+        val completed = completedSessions.filter { it.isCompleted }
+        if (completed.size < 4) return 1.0
+
+        val earliest = completed.minOfOrNull { it.dateTimestamp } ?: return 1.0
+        val daysSinceFirst = (nowMs - earliest) / 86_400_000L
+        if (daysSinceFirst < 14) return 1.0
+
+        val weeksOfHistory = (daysSinceFirst / 7.0).coerceIn(1.0, 4.0)
+
         val sevenDaysAgo = nowMs - (7L * 86_400_000L)
         val twentyEightDaysAgo = nowMs - (28L * 86_400_000L)
 
-        val acuteLoad = completedSessions.filter { it.isCompleted && it.dateTimestamp >= sevenDaysAgo }
+        val acuteLoad = completed.filter { it.dateTimestamp >= sevenDaysAgo }
             .sumOf { it.totalTonnageKg }
 
-        val chronicLoadTotal = completedSessions.filter { it.isCompleted && it.dateTimestamp >= twentyEightDaysAgo }
+        val chronicLoadTotal = completed.filter { it.dateTimestamp >= twentyEightDaysAgo }
             .sumOf { it.totalTonnageKg }
 
-        val chronicWeeklyAvg = chronicLoadTotal / 4.0
+        val chronicWeeklyAvg = chronicLoadTotal / weeksOfHistory
         return if (chronicWeeklyAvg > 0) acuteLoad / chronicWeeklyAvg else 1.0
     }
 

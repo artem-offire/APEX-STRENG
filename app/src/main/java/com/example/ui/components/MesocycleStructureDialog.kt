@@ -34,10 +34,12 @@ fun MesocycleStructureDialog(
     sessions: List<WorkoutSessionEntity>,
     weekPlans: List<MesocycleWeekPlanEntity> = emptyList(),
     overloadLogs: List<ProgressiveOverloadLogEntity> = emptyList(),
+    onDeleteSession: ((Long) -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     var selectedWeekTab by remember { mutableStateOf(mesocycle.currentWeek) }
     var selectedSectionTab by remember { mutableStateOf(0) } // 0 = По тижнях, 1 = Журнал прогресії (Room), 2 = Схема БД Room
+    var sessionToDelete by remember { mutableStateOf<WorkoutSessionEntity?>(null) }
 
     val sessionsByWeek = remember(sessions) {
         sessions.groupBy { it.weekNumber }
@@ -289,8 +291,26 @@ fun MesocycleStructureDialog(
                                                 }
                                             }
 
-                                            if (session.isCompleted) {
-                                                Text("✓", fontSize = 14.sp, color = SuccessGreen, fontWeight = FontWeight.Bold)
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                if (session.isCompleted) {
+                                                    Text("✓", fontSize = 14.sp, color = SuccessGreen, fontWeight = FontWeight.Bold)
+                                                }
+                                                if (onDeleteSession != null) {
+                                                    IconButton(
+                                                        onClick = { sessionToDelete = session },
+                                                        modifier = Modifier.size(32.dp).testTag("delete_meso_session_${session.id}")
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.DeleteOutline,
+                                                            contentDescription = "Видалити тренування",
+                                                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
+                                                            modifier = Modifier.size(18.dp)
+                                                        )
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -439,8 +459,63 @@ fun MesocycleStructureDialog(
                         }
                     }
                 }
-            }
         }
+    }
+}
+
+    // Confirmation dialog for deleting a workout session from mesocycle
+    sessionToDelete?.let { session ->
+        AlertDialog(
+            onDismissRequest = { sessionToDelete = null },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.DeleteOutline,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "Видалити тренування з програми?",
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium
+                )
+            },
+            text = {
+                Text(
+                    text = "Ви впевнені, що хочете видалити «${session.title}» (тиждень ${session.weekNumber}) з цього мезоциклу?",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteSession?.invoke(session.id)
+                        sessionToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.testTag("confirm_delete_meso_session_btn")
+                ) {
+                    Text("Видалити", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { sessionToDelete = null },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Скасувати")
+                }
+            },
+            shape = RoundedCornerShape(18.dp),
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     }
 }
 

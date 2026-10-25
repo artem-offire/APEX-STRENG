@@ -57,6 +57,7 @@ fun MesocycleBuilderModal(
     var selectedSplitTemplate by remember { mutableStateOf("UPPER_LOWER") }
     var plannedDays by remember { mutableStateOf(getDefaultSplitDays("UPPER_LOWER")) }
     var exercisePickerTargetDayIndex by remember { mutableStateOf<Int?>(null) }
+    var dayToDeleteIndex by remember { mutableStateOf<Int?>(null) }
 
     // Progression calculation (Step 3)
     val calculatedProgression = remember(plannedDays, totalWeeks, selectedModel) {
@@ -149,9 +150,7 @@ fun MesocycleBuilderModal(
                                 plannedDays = plannedDays + PlannedDay("День ${plannedDays.size + 1}: Нове тренування", emptyList())
                             },
                             onRemoveDay = { idx ->
-                                if (plannedDays.size > 1) {
-                                    plannedDays = plannedDays.filterIndexed { i, _ -> i != idx }
-                                }
+                                dayToDeleteIndex = idx
                             },
                             onUpdateDayTitle = { idx, newTitle ->
                                 plannedDays = plannedDays.mapIndexed { i, d -> if (i == idx) d.copy(dayTitle = newTitle) else d }
@@ -251,6 +250,86 @@ fun MesocycleBuilderModal(
             },
             onDismiss = { exercisePickerTargetDayIndex = null }
         )
+    }
+
+    // Confirmation dialog for deleting a workout day / template
+    dayToDeleteIndex?.let { idx ->
+        val day = plannedDays.getOrNull(idx)
+        if (day != null) {
+            AlertDialog(
+                onDismissRequest = { dayToDeleteIndex = null },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.DeleteOutline,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(28.dp)
+                    )
+                },
+                title = {
+                    Text(
+                        text = "Видалити тренувальний день?",
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = "Ви впевнені, що хочете видалити «${day.dayTitle}» та всі додані до нього вправи (${day.exercises.size}) з цієї програми?",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (plannedDays.size <= 1) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
+                            ) {
+                                Text(
+                                    text = "⚠️ Мезоцикл повинен містити щонайменше 1 тренувальний день.",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                )
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    if (plannedDays.size > 1) {
+                        Button(
+                            onClick = {
+                                plannedDays = plannedDays.filterIndexed { i, _ -> i != idx }
+                                dayToDeleteIndex = null
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.testTag("confirm_delete_planned_day_btn")
+                        ) {
+                            Text("Видалити", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                },
+                dismissButton = {
+                    OutlinedButton(
+                        onClick = { dayToDeleteIndex = null },
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text(if (plannedDays.size <= 1) "Зрозуміло" else "Скасувати")
+                    }
+                },
+                shape = RoundedCornerShape(18.dp),
+                containerColor = MaterialTheme.colorScheme.surface
+            )
+        } else {
+            dayToDeleteIndex = null
+        }
     }
 }
 

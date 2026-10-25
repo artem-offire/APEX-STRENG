@@ -46,11 +46,13 @@ fun MuscleRecoveryCard(
     onToggleNotifications: (Boolean) -> Unit,
     onSendTestNotification: (MuscleGroup) -> Unit,
     onStartWorkoutWithMuscles: (String, List<MuscleGroup>) -> Unit,
+    unreadNotificationsCount: Int = 0,
+    onOpenNotificationsModal: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     var isExpanded by remember { mutableStateOf(true) }
-    var selectedFilter by remember { mutableStateOf(0) } // 0: Всі, 1: Готові, 2: Відновлюються
+    var selectedFilter by remember { mutableStateOf(1) } // 1: Готові (за замовчуванням), 2: Відновлюються, 0: Всі
     var detailStatus by remember { mutableStateOf<MuscleGroupRecoveryStatus?>(null) }
     var notificationPermissionGranted by remember {
         mutableStateOf(
@@ -140,7 +142,37 @@ fun MuscleRecoveryCard(
                     }
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    // Notification history / inbox button
+                    IconButton(
+                        onClick = onOpenNotificationsModal,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .testTag("open_notifications_inbox_from_card_btn")
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Inbox,
+                                contentDescription = "Історія сповіщень",
+                                tint = if (unreadNotificationsCount > 0) IceCyanPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(19.dp)
+                            )
+                            if (unreadNotificationsCount > 0) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = Color(0xFFF59E0B),
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(top = 4.dp, end = 4.dp)
+                                        .size(7.dp)
+                                ) {}
+                            }
+                        }
+                    }
+
                     // Notification quick toggle
                     IconButton(
                         onClick = {
@@ -351,16 +383,6 @@ fun MuscleRecoveryCard(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         FilterChip(
-                            selected = selectedFilter == 0,
-                            onClick = { selectedFilter = 0 },
-                            label = { Text("Всі (11)", fontSize = 11.sp) },
-                            shape = RoundedCornerShape(9.dp),
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = IceCyanPrimary.copy(alpha = 0.2f),
-                                selectedLabelColor = IceCyanPrimary
-                            )
-                        )
-                        FilterChip(
                             selected = selectedFilter == 1,
                             onClick = { selectedFilter = 1 },
                             label = { Text("Готові (${summary.readyMuscleGroups.size})", fontSize = 11.sp) },
@@ -380,6 +402,16 @@ fun MuscleRecoveryCard(
                                 selectedLabelColor = Color(0xFFF59E0B)
                             )
                         )
+                        FilterChip(
+                            selected = selectedFilter == 0,
+                            onClick = { selectedFilter = 0 },
+                            label = { Text("Всі (11)", fontSize = 11.sp) },
+                            shape = RoundedCornerShape(9.dp),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = IceCyanPrimary.copy(alpha = 0.2f),
+                                selectedLabelColor = IceCyanPrimary
+                            )
+                        )
                     }
 
                     val filteredStatuses = remember(summary.statuses, selectedFilter) {
@@ -390,11 +422,31 @@ fun MuscleRecoveryCard(
                         }
                     }
 
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        filteredStatuses.forEach { item ->
-                            MuscleStatusRow(
-                                status = item,
-                                onClick = { detailStatus = item }
+                    if (filteredStatuses.isNotEmpty()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            filteredStatuses.forEach { item ->
+                                MuscleStatusRow(
+                                    status = item,
+                                    onClick = { detailStatus = item }
+                                )
+                            }
+                        }
+                    } else {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainer,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = if (selectedFilter == 1) {
+                                    "Наразі всі м'язи активно відновлюються. Перегляньте час до завершення у вкладці «Відновлюються»."
+                                } else {
+                                    "Немає даних для відображення"
+                                },
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(14.dp)
                             )
                         }
                     }

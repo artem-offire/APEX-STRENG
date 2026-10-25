@@ -59,7 +59,8 @@ object GamificationEngine {
         sessions: List<WorkoutSessionEntity>,
         completedSets: List<WorkoutSetWithExerciseInfo>,
         customExercisesCount: Int = 0,
-        dailyGoalsCompleted: Int = 0
+        dailyGoalsCompleted: Int = 0,
+        readScienceArticlesCount: Int = 0
     ): AthleteGamificationState {
         val completedSessions = sessions.filter { it.isCompleted }.sortedBy { it.dateTimestamp }
         val totalWorkouts = completedSessions.size
@@ -75,7 +76,8 @@ object GamificationEngine {
         // 1 XP per 100 kg tonnage
         // 25 XP per streak count
         // 50 XP per completed daily goal in background
-        var xp = (totalWorkouts * 150) + (totalSets * 10) + (totalTonnage / 100.0).toInt() + (streak * 25) + (dailyGoalsCompleted * 50)
+        // 50 XP per read science article
+        var xp = (totalWorkouts * 150) + (totalSets * 10) + (totalTonnage / 100.0).toInt() + (streak * 25) + (dailyGoalsCompleted * 50) + (readScienceArticlesCount * 50)
 
         // Evaluate achievements
         val achievements = evaluateAchievements(
@@ -84,7 +86,8 @@ object GamificationEngine {
             totalTonnage = totalTonnage,
             streak = streak,
             customExercisesCount = customExercisesCount,
-            dailyGoalsCompleted = dailyGoalsCompleted
+            dailyGoalsCompleted = dailyGoalsCompleted,
+            readScienceArticlesCount = readScienceArticlesCount
         )
 
         // Add XP rewards from unlocked achievements
@@ -166,157 +169,24 @@ object GamificationEngine {
     }
 
     private fun evaluateAchievements(
-        totalWorkouts: Int,
-        totalSets: Int,
-        totalTonnage: Double,
-        streak: Int,
-        customExercisesCount: Int,
-        dailyGoalsCompleted: Int = 0
+        totalWorkouts: Int = 0,
+        totalSets: Int = 0,
+        totalTonnage: Double = 0.0,
+        streak: Int = 0,
+        customExercisesCount: Int = 0,
+        dailyGoalsCompleted: Int = 0,
+        readScienceArticlesCount: Int = 0
     ): List<Achievement> {
-        val tonnageInt = totalTonnage.toInt()
-
         return listOf(
             Achievement(
-                id = "habits_consistency",
-                title = "Майстер регулярності",
-                description = "Виконати денну ціль регулярних вправ",
-                iconEmoji = "🎯",
-                xpReward = 200,
-                currentProgress = dailyGoalsCompleted.coerceAtMost(3),
-                maxProgress = 3,
-                isUnlocked = dailyGoalsCompleted >= 1,
-                category = AchievementCategory.CONSISTENCY
-            ),
-            Achievement(
-                id = "first_workout",
-                title = "Перший крок",
-                description = "Завершити перше тренування у застосунку",
-                iconEmoji = "🥉",
-                xpReward = 100,
-                currentProgress = totalWorkouts.coerceAtMost(1),
-                maxProgress = 1,
-                isUnlocked = totalWorkouts >= 1,
-                category = AchievementCategory.WORKOUTS
-            ),
-            Achievement(
-                id = "five_workouts",
-                title = "Залізний ритм",
-                description = "Виконати 5 тренувань",
-                iconEmoji = "🥈",
-                xpReward = 200,
-                currentProgress = totalWorkouts.coerceAtMost(5),
-                maxProgress = 5,
-                isUnlocked = totalWorkouts >= 5,
-                category = AchievementCategory.WORKOUTS
-            ),
-            Achievement(
-                id = "fifteen_workouts",
-                title = "Дисципліна титана",
-                description = "Виконати 15 повноцінних занять",
-                iconEmoji = "🥇",
-                xpReward = 400,
-                currentProgress = totalWorkouts.coerceAtMost(15),
-                maxProgress = 15,
-                isUnlocked = totalWorkouts >= 15,
-                category = AchievementCategory.WORKOUTS
-            ),
-            Achievement(
-                id = "thirty_workouts",
-                title = "Apex Ветеран",
-                description = "Завершити 30 тренувань",
-                iconEmoji = "👑",
-                xpReward = 800,
-                currentProgress = totalWorkouts.coerceAtMost(30),
-                maxProgress = 30,
-                isUnlocked = totalWorkouts >= 30,
-                category = AchievementCategory.WORKOUTS
-            ),
-            Achievement(
-                id = "sets_50",
-                title = "50 підходів",
-                description = "Виконати 50 якісних робочих підходів",
-                iconEmoji = "⚡",
-                xpReward = 150,
-                currentProgress = totalSets.coerceAtMost(50),
-                maxProgress = 50,
-                isUnlocked = totalSets >= 50,
-                category = AchievementCategory.SETS
-            ),
-            Achievement(
-                id = "sets_150",
-                title = "Майстер підходів",
-                description = "Виконати 150 якісних робочих підходів",
-                iconEmoji = "🛡️",
-                xpReward = 350,
-                currentProgress = totalSets.coerceAtMost(150),
-                maxProgress = 150,
-                isUnlocked = totalSets >= 150,
-                category = AchievementCategory.SETS
-            ),
-            Achievement(
-                id = "sets_300",
-                title = "Залізний резерв",
-                description = "Виконати 300 якісних робочих підходів",
-                iconEmoji = "💎",
-                xpReward = 750,
-                currentProgress = totalSets.coerceAtMost(300),
-                maxProgress = 300,
-                isUnlocked = totalSets >= 300,
-                category = AchievementCategory.SETS
-            ),
-            Achievement(
-                id = "streak_3",
-                title = "Вогонь серії",
-                description = "Підтримувати тренувальну серію з 3 занять",
-                iconEmoji = "🔥",
-                xpReward = 150,
-                currentProgress = streak.coerceAtMost(3),
-                maxProgress = 3,
-                isUnlocked = streak >= 3,
-                category = AchievementCategory.CONSISTENCY
-            ),
-            Achievement(
-                id = "streak_7",
-                title = "Непереможний",
-                description = "Підтримувати серію з 7 занять поспіль",
-                iconEmoji = "⚔️",
-                xpReward = 350,
-                currentProgress = streak.coerceAtMost(7),
-                maxProgress = 7,
-                isUnlocked = streak >= 7,
-                category = AchievementCategory.CONSISTENCY
-            ),
-            Achievement(
-                id = "tonnage_10k",
-                title = "10 тонн заліза",
-                description = "Підняти сумарно 10 000 кг тоннажу",
-                iconEmoji = "🎯",
-                xpReward = 200,
-                currentProgress = tonnageInt.coerceAtMost(10000),
-                maxProgress = 10000,
-                isUnlocked = tonnageInt >= 10000,
-                category = AchievementCategory.WORKOUTS
-            ),
-            Achievement(
-                id = "tonnage_50k",
-                title = "50 тонн сталі",
-                description = "Підняти сумарно 50 000 кг тоннажу",
-                iconEmoji = "🏆",
-                xpReward = 450,
-                currentProgress = tonnageInt.coerceAtMost(50000),
-                maxProgress = 50000,
-                isUnlocked = tonnageInt >= 50000,
-                category = AchievementCategory.WORKOUTS
-            ),
-            Achievement(
-                id = "custom_path",
-                title = "Свій шлях",
-                description = "Створити або вписати власну вправу",
-                iconEmoji = "✏️",
-                xpReward = 100,
-                currentProgress = customExercisesCount.coerceAtMost(1),
-                maxProgress = 1,
-                isUnlocked = customExercisesCount >= 1,
+                id = "science_master",
+                title = "Знавець теорії",
+                description = "Вивчити всі 6 наукових статей про побудову тренувань",
+                iconEmoji = "🎓",
+                xpReward = 300,
+                currentProgress = readScienceArticlesCount.coerceAtMost(6),
+                maxProgress = 6,
+                isUnlocked = readScienceArticlesCount >= 6,
                 category = AchievementCategory.CUSTOM
             )
         )

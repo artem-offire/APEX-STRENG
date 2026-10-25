@@ -23,6 +23,10 @@ object MuscleRecoveryNotificationHelper {
     const val EXTRA_MUSCLE_NAME = "extra_muscle_name"
     const val EXTRA_RECOVERY_HOURS = "extra_recovery_hours"
 
+    const val ACTION_MARK_READ = "com.example.apex.ACTION_MARK_READ"
+    const val ACTION_MARK_ALL_READ = "com.example.apex.ACTION_MARK_ALL_READ"
+    const val EXTRA_NOTIFICATION_ID = "extra_notification_id"
+
     private const val PREFS_NAME = "apex_muscle_notifications"
     private const val KEY_NOTIFICATIONS_ENABLED = "recovery_push_enabled"
 
@@ -74,6 +78,8 @@ object MuscleRecoveryNotificationHelper {
 
         createNotificationChannel(context)
 
+        val notificationId = 2000 + (muscleName.hashCode() % 1000).let { if (it < 0) -it else it }
+
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
@@ -84,10 +90,38 @@ object MuscleRecoveryNotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
         )
 
+        val markReadIntent = Intent(context, MuscleRecoveryNotificationReceiver::class.java).apply {
+            action = ACTION_MARK_READ
+            putExtra(EXTRA_NOTIFICATION_ID, notificationId)
+        }
+        val markReadPendingIntent = PendingIntent.getBroadcast(
+            context,
+            notificationId + 10000,
+            markReadIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+        )
+
+        val notificationTitle = "💪 Мʼязи відновилися: $muscleName!"
+        val notificationMessage = "Минуло $recoveryHours год фізіологічного інтервалу. Суперкомпенсація досягнута — час для нового тренування!"
+
+        // Save to in-app history repository
+        AppNotificationRepository.addNotification(
+            context = context,
+            item = AppNotificationItem(
+                id = "${muscleName}_${System.currentTimeMillis()}",
+                notificationId = notificationId,
+                title = notificationTitle,
+                message = notificationMessage,
+                muscleGroup = muscleName,
+                timestamp = System.currentTimeMillis(),
+                isRead = false
+            )
+        )
+
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("💪 Мʼязи відновилися: $muscleName!")
-            .setContentText("Минуло $recoveryHours год фізіологічного інтервалу. Суперкомпенсація досягнута — час для нового тренування!")
+            .setContentTitle(notificationTitle)
+            .setContentText(notificationMessage)
             .setStyle(
                 NotificationCompat.BigTextStyle()
                     .bigText("Група «$muscleName» повністю відновилася після навантаження (минув науковий інтервал $recoveryHours год). Синтез білка та енергетичні депо відновлені. Оптимальний час для тренування!")
@@ -95,12 +129,16 @@ object MuscleRecoveryNotificationHelper {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_RECOMMENDATION)
             .setContentIntent(pendingIntent)
+            .addAction(
+                android.R.drawable.checkbox_on_background,
+                "✓ Прочитано",
+                markReadPendingIntent
+            )
             .setAutoCancel(true)
             .setVibrate(longArrayOf(0, 250, 150, 250))
             .build()
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
-        val notificationId = 2000 + (muscleName.hashCode() % 1000).let { if (it < 0) -it else it }
         notificationManager?.notify(notificationId, notification)
     }
 

@@ -679,7 +679,10 @@ fun AchievementsModal(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.85f)
+                .then(
+                    if (achievements.size <= 1) Modifier.wrapContentHeight()
+                    else Modifier.fillMaxHeight(0.85f)
+                )
                 .padding(vertical = 12.dp)
                 .testTag("achievements_dialog")
         ) {
@@ -696,7 +699,13 @@ fun AchievementsModal(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Відкрито ${achievements.count { it.isUnlocked }} з ${achievements.size} • $totalXp XP",
+                            text = if (achievements.size == 1) {
+                                val item = achievements.first()
+                                if (item.isUnlocked) "Отримано (1 з 1) • $totalXp XP"
+                                else "Прогрес: ${item.currentProgress}/${item.maxProgress} • $totalXp XP"
+                            } else {
+                                "Відкрито ${achievements.count { it.isUnlocked }} з ${achievements.size} • $totalXp XP"
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = IceCyanPrimary
                         )
@@ -707,35 +716,39 @@ fun AchievementsModal(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                if (achievements.size > 1) {
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                // Filter buttons
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    FilterChip(
-                        selected = selectedFilter == "ALL",
-                        onClick = { selectedFilter = "ALL" },
-                        label = { Text("Всі (${achievements.size})", fontSize = 11.sp) }
-                    )
-                    FilterChip(
-                        selected = selectedFilter == "UNLOCKED",
-                        onClick = { selectedFilter = "UNLOCKED" },
-                        label = { Text("Отримані (${achievements.count { it.isUnlocked }})", fontSize = 11.sp) }
-                    )
-                    FilterChip(
-                        selected = selectedFilter == "IN_PROGRESS",
-                        onClick = { selectedFilter = "IN_PROGRESS" },
-                        label = { Text("В процесі (${achievements.count { !it.isUnlocked }})", fontSize = 11.sp) }
-                    )
+                    // Filter buttons
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        FilterChip(
+                            selected = selectedFilter == "ALL",
+                            onClick = { selectedFilter = "ALL" },
+                            label = { Text("Всі (${achievements.size})", fontSize = 11.sp) }
+                        )
+                        FilterChip(
+                            selected = selectedFilter == "UNLOCKED",
+                            onClick = { selectedFilter = "UNLOCKED" },
+                            label = { Text("Отримані (${achievements.count { it.isUnlocked }})", fontSize = 11.sp) }
+                        )
+                        FilterChip(
+                            selected = selectedFilter == "IN_PROGRESS",
+                            onClick = { selectedFilter = "IN_PROGRESS" },
+                            label = { Text("В процесі (${achievements.count { !it.isUnlocked }})", fontSize = 11.sp) }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                } else {
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
-
-                Spacer(modifier = Modifier.height(10.dp))
 
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxSize()
+                    modifier = if (achievements.size <= 1) Modifier.wrapContentHeight() else Modifier.fillMaxSize()
                 ) {
                     items(filteredList, key = { it.id }) { item ->
                         AchievementItemCard(achievement = item)

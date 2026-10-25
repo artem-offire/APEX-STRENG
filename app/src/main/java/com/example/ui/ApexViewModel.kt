@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.*
 import com.example.engine.*
 import com.example.model.*
+import com.example.notification.AppNotificationItem
+import com.example.notification.AppNotificationRepository
 import com.example.notification.MuscleRecoveryNotificationHelper
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -18,6 +20,7 @@ class ApexViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         MuscleRecoveryNotificationHelper.createNotificationChannel(application)
+        AppNotificationRepository.initialize(application)
         viewModelScope.launch {
             db.apexDao().deleteHomeGymProfile()
             repository.cleanupEmptyCancelledSessions()
@@ -109,26 +112,7 @@ class ApexViewModel(application: Application) : AndroidViewModel(application) {
         _manualCheckedGoals.value = if (current.contains(goalId)) current - goalId else current + goalId
     }
 
-    val gamificationState: StateFlow<AthleteGamificationState> = combine(
-        allSessions,
-        allCompletedSets,
-        allExercises,
-        dailyGoals
-    ) { sessions, sets, exercises, goals ->
-        val customCount = exercises.count { it.instructionsUk == "Власна вправа" }
-        GamificationEngine.calculateGamificationState(
-            sessions = sessions,
-            completedSets = sets,
-            customExercisesCount = customCount,
-            dailyGoalsCompleted = goals.completedCount
-        )
-    }.stateIn(
-        viewModelScope,
-        SharingStarted.WhileSubscribed(5000),
-        GamificationEngine.calculateGamificationState(emptyList(), emptyList(), 0, 0)
-    )
-
-    // User Nickname persistence
+    // User preferences persistence
     private val userPrefs = application.getSharedPreferences("apex_user_prefs", android.content.Context.MODE_PRIVATE)
     private val _userNickname = MutableStateFlow(userPrefs.getString("user_nickname", "Атлет") ?: "Атлет")
     val userNickname: StateFlow<String> = _userNickname.asStateFlow()
@@ -138,6 +122,57 @@ class ApexViewModel(application: Application) : AndroidViewModel(application) {
         _userNickname.value = clean
         userPrefs.edit().putString("user_nickname", clean).apply()
     }
+
+    // Science Knowledge Base read tracking
+    private val _readScienceArticleIds = MutableStateFlow<Set<String>>(
+        userPrefs.getStringSet("read_science_articles", emptySet())?.toSet() ?: emptySet()
+    )
+    val readScienceArticleIds: StateFlow<Set<String>> = _readScienceArticleIds.asStateFlow()
+
+    fun markScienceArticleRead(articleId: String) {
+        val current = _readScienceArticleIds.value.toMutableSet()
+        if (current.add(articleId)) {
+            _readScienceArticleIds.value = current
+            userPrefs.edit().putStringSet("read_science_articles", current).apply()
+            audioHaptic.playSetComplete()
+        }
+    }
+
+    // App Notifications (Muscle Recovery & in-app notifications with "Read" state)
+    val appNotifications: StateFlow<List<AppNotificationItem>> = AppNotificationRepository.notifications
+
+    fun markNotificationRead(id: String) {
+        AppNotificationRepository.markAsReadById(getApplication(), id)
+    }
+
+    fun markAllNotificationsRead() {
+        AppNotificationRepository.markAllAsRead(getApplication())
+    }
+
+    fun clearAllNotifications() {
+        AppNotificationRepository.clearAll(getApplication())
+    }
+
+    val gamificationState: StateFlow<AthleteGamificationState> = combine(
+        allSessions,
+        allCompletedSets,
+        allExercises,
+        dailyGoals,
+        readScienceArticleIds
+    ) { sessions, sets, exercises, goals, readArticles ->
+        val customCount = exercises.count { it.instructionsUk == "Власна вправа" }
+        GamificationEngine.calculateGamificationState(
+            sessions = sessions,
+            completedSets = sets,
+            customExercisesCount = customCount,
+            dailyGoalsCompleted = goals.completedCount,
+            readScienceArticlesCount = readArticles.size
+        )
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        GamificationEngine.calculateGamificationState(emptyList(), emptyList(), 0, 0, 0)
+    )
 
     // Music Integration Persistence (YouTube Music & Spotify)
     private val _preferredMusicPlatform = MutableStateFlow(userPrefs.getString("preferred_music_platform", "YOUTUBE_MUSIC") ?: "YOUTUBE_MUSIC")
@@ -243,10 +278,23 @@ class ApexViewModel(application: Application) : AndroidViewModel(application) {
     private val _activeWorkoutElapsedSeconds = MutableStateFlow<Long>(0)
     val activeWorkoutElapsedSeconds: StateFlow<Long> = _activeWorkoutElapsedSeconds.asStateFlow()
 
+    private val _isWorkoutMinimized = MutableStateFlow(false)
+    val isWorkoutMinimized: StateFlow<Boolean> = _isWorkoutMinimized.asStateFlow()
+
+    fun minimizeWorkout() {
+        _isWorkoutMinimized.value = true
+    }
+
+    fun expandWorkout() {
+        _isWorkoutMinimized.value = false
+    }
+
     private var workoutTimerJob: Job? = null
 
-    // Rest timer state backed by background service
-    private val _preferredRestDuration = MutableStateFlow<Int>(90)
+    // Rest timer state backed by background service and persisted across workouts
+    private val _preferredRestDuration = MutableStateFlow<Int>(
+        userPrefs.getInt("preferred_rest_duration_seconds", 90).coerceIn(30, 600)
+    )
     val preferredRestDuration: StateFlow<Int> = _preferredRestDuration.asStateFlow()
 
     val restSecondsLeft: StateFlow<Int> = com.example.service.RestTimerManager.restSecondsLeft
@@ -254,11 +302,19 @@ class ApexViewModel(application: Application) : AndroidViewModel(application) {
     val isRestActive: StateFlow<Boolean> = com.example.service.RestTimerManager.isRestActive
 
     fun setPreferredRestDuration(seconds: Int) {
-        _preferredRestDuration.value = seconds.coerceIn(30, 600)
+        val valid = seconds.coerceIn(30, 600)
+        _preferredRestDuration.value = valid
+        userPrefs.edit().putInt("preferred_rest_duration_seconds", valid).apply()
     }
 
-    // Dark theme override (default to true for Obsidian & Mint theme)
-    val isDarkThemeOverride = MutableStateFlow<Boolean?>(true)
+    // Dark theme override (persisted in userPrefs, default to true for Obsidian & Mint theme)
+    val isDarkThemeOverride = MutableStateFlow<Boolean?>(
+        if (userPrefs.contains("is_dark_theme_override")) {
+            userPrefs.getBoolean("is_dark_theme_override", true)
+        } else {
+            true
+        }
+    )
 
     // Progression advice cache for active workout exercises
     private val _progressionAdviceMap = MutableStateFlow<Map<String, DoubleProgressionEngine.ProgressionSuggestion>>(emptyMap())
@@ -288,11 +344,18 @@ class ApexViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleDarkMode() {
-        isDarkThemeOverride.value = when (isDarkThemeOverride.value) {
+        val next = when (isDarkThemeOverride.value) {
             true -> false
             false -> true
             null -> false
         }
+        isDarkThemeOverride.value = next
+        userPrefs.edit().putBoolean("is_dark_theme_override", next).apply()
+    }
+
+    fun setDarkMode(isDark: Boolean) {
+        isDarkThemeOverride.value = isDark
+        userPrefs.edit().putBoolean("is_dark_theme_override", isDark).apply()
     }
 
     fun startQuickExerciseWorkout(exerciseName: String) {
@@ -349,6 +412,7 @@ class ApexViewModel(application: Application) : AndroidViewModel(application) {
 
     // Workout operations
     fun startWorkout(sessionId: Long) {
+        _isWorkoutMinimized.value = false
         _activeWorkoutSessionId.value = sessionId
         _activeWorkoutElapsedSeconds.value = 0
         lastUserActivityTimestamp = System.currentTimeMillis()
@@ -506,6 +570,10 @@ class ApexViewModel(application: Application) : AndroidViewModel(application) {
         lastUserActivityTimestamp = System.currentTimeMillis()
         viewModelScope.launch {
             val currentList = _activeWorkoutExercisesWithSets.value
+            val remainingUncompletedSets = currentList
+                .flatMap { it.sets }
+                .filter { it.id != setId && !it.isCompleted }
+
             for (item in currentList) {
                 val match = item.sets.find { it.id == setId }
                 if (match != null) {
@@ -524,8 +592,14 @@ class ApexViewModel(application: Application) : AndroidViewModel(application) {
                     )
                     db.apexDao().updateSet(updated)
                     com.example.service.SetCompleteAudioHelper.playSetCompleteSound(getApplication())
-                    // Auto-start rest timer using user configured rest time (60-120s)
-                    startRestTimer(_preferredRestDuration.value)
+
+                    // Only start rest timer if there are other uncompleted sets left in the workout
+                    if (remainingUncompletedSets.isNotEmpty()) {
+                        startRestTimer(_preferredRestDuration.value)
+                    } else {
+                        // All exercises and sets finished - cancel rest timer
+                        cancelRestTimer()
+                    }
                     break
                 }
             }
@@ -1009,6 +1083,87 @@ class ApexViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun startFrequentWorkout(item: FrequentWorkoutItem) {
+        if (item.isFromHistory && item.sourceSessionId != null) {
+            repeatWorkout(item.sourceSessionId)
+        } else {
+            viewModelScope.launch {
+                val allEx = db.apexDao().getAllExercises().firstOrNull() ?: emptyList()
+                val plannedList = mutableListOf<PlannedExercise>()
+
+                // 1. Try suggested exercise names first
+                for (name in item.suggestedExerciseNames) {
+                    val match = allEx.find { it.name.equals(name, ignoreCase = true) || it.name.contains(name, ignoreCase = true) }
+                    if (match != null && plannedList.none { it.exerciseName == match.name }) {
+                        val equip = match.equipment?.let { runCatching { EquipmentType.valueOf(it) }.getOrNull() } ?: EquipmentType.BARBELL
+                        val lastWeight = allCompletedSets.value
+                            .filter { it.exerciseName.equals(match.name, ignoreCase = true) }
+                            .maxByOrNull { it.timestamp }?.weightKg ?: when {
+                            match.name.contains("Жим", ignoreCase = true) -> 60.0
+                            match.name.contains("Присідання", ignoreCase = true) -> 80.0
+                            match.name.contains("Тяга", ignoreCase = true) -> 60.0
+                            else -> 40.0
+                        }
+                        plannedList.add(
+                            PlannedExercise(
+                                exerciseName = match.name,
+                                muscleGroup = match.muscleGroup,
+                                equipment = equip,
+                                baseWeightKg = lastWeight,
+                                baseRepsMin = match.defaultTargetRepsMin,
+                                baseRepsMax = match.defaultTargetRepsMax,
+                                isPriority = true
+                            )
+                        )
+                    }
+                }
+
+                // 2. If list is small (< 3), supplement with exercises from target muscles
+                if (plannedList.size < 3) {
+                    for (muscle in item.targetMuscles) {
+                        val candidates = allEx.filter { ex ->
+                            val groups = MuscleGroup.parseMuscleGroups(ex.muscleGroup)
+                            groups.contains(muscle) && plannedList.none { it.exerciseName == ex.name }
+                        }
+                        for (cand in candidates.take(2)) {
+                            val equip = cand.equipment?.let { runCatching { EquipmentType.valueOf(it) }.getOrNull() } ?: EquipmentType.BARBELL
+                            val lastWeight = allCompletedSets.value
+                                .filter { it.exerciseName.equals(cand.name, ignoreCase = true) }
+                                .maxByOrNull { it.timestamp }?.weightKg ?: 40.0
+                            plannedList.add(
+                                PlannedExercise(
+                                    exerciseName = cand.name,
+                                    muscleGroup = cand.muscleGroup,
+                                    equipment = equip,
+                                    baseWeightKg = lastWeight,
+                                    baseRepsMin = cand.defaultTargetRepsMin,
+                                    baseRepsMax = cand.defaultTargetRepsMax
+                                )
+                            )
+                            if (plannedList.size >= 4) break
+                        }
+                        if (plannedList.size >= 4) break
+                    }
+                }
+
+                startTodayWorkout(
+                    title = item.title.removePrefix("⭐ ").trim(),
+                    selectedMuscles = item.targetMuscles,
+                    exercises = plannedList.ifEmpty {
+                        listOf(
+                            PlannedExercise(
+                                exerciseName = "Жим штанги лежачи",
+                                muscleGroup = "CHEST",
+                                equipment = EquipmentType.BARBELL,
+                                baseWeightKg = 50.0
+                            )
+                        )
+                    }
+                )
+            }
+        }
+    }
+
     fun repeatWorkout(sessionId: Long) {
         viewModelScope.launch {
             val sourceSession = db.apexDao().getSessionById(sessionId) ?: return@launch
@@ -1152,6 +1307,7 @@ class ApexViewModel(application: Application) : AndroidViewModel(application) {
 
             audioHaptic.playFinishTone()
             cancelRestTimer()
+            _isWorkoutMinimized.value = false
             _activeWorkoutSessionId.value = null
             _activeWorkoutExercisesWithSets.value = emptyList()
 
@@ -1172,6 +1328,7 @@ class ApexViewModel(application: Application) : AndroidViewModel(application) {
         val currentId = _activeWorkoutSessionId.value
         workoutTimerJob?.cancel()
         cancelRestTimer()
+        _isWorkoutMinimized.value = false
         _activeWorkoutSessionId.value = null
         _activeWorkoutExercisesWithSets.value = emptyList()
         _activeWorkoutElapsedSeconds.value = 0
@@ -1182,7 +1339,9 @@ class ApexViewModel(application: Application) : AndroidViewModel(application) {
 
     // Rest Timer operations backed by foreground service
     fun startRestTimer(seconds: Int) {
-        com.example.service.RestTimerManager.start(getApplication(), seconds)
+        val validSecs = seconds.coerceIn(30, 600)
+        setPreferredRestDuration(validSecs)
+        com.example.service.RestTimerManager.start(getApplication(), validSecs)
     }
 
     fun adjustRestTimer(deltaSeconds: Int) {

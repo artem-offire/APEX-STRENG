@@ -22,12 +22,17 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
+import com.example.model.ScienceArticle
+import com.example.model.ScienceKnowledgeBase
 import com.example.service.RestTimerAudioHelper
 import com.example.service.SetCompleteAudioHelper
 import com.example.ui.ApexViewModel
+import com.example.ui.components.AchievementsModal
 import com.example.ui.components.ExercisePickerDialog
 import com.example.ui.components.RestTimerSoundDialog
+import com.example.ui.components.ScienceArticleModal
 import com.example.ui.components.ScientificVolumeModal
 import com.example.ui.components.SetCompleteSoundDialog
 import com.example.ui.theme.*
@@ -40,6 +45,8 @@ fun ProfileTab(viewModel: ApexViewModel) {
     val isDarkTheme by viewModel.isDarkThemeOverride.collectAsState()
     val userNickname by viewModel.userNickname.collectAsState()
     val allExercises by viewModel.allExercises.collectAsState()
+    val gamificationState by viewModel.gamificationState.collectAsState()
+    val readScienceArticleIds by viewModel.readScienceArticleIds.collectAsState()
 
     var showVolumeModal by remember { mutableStateOf(false) }
     var showEditNicknameDialog by remember { mutableStateOf(false) }
@@ -50,6 +57,8 @@ fun ProfileTab(viewModel: ApexViewModel) {
     var currentSound by remember { mutableStateOf(RestTimerAudioHelper.getSelectedSound(context)) }
     var showSetSoundDialog by remember { mutableStateOf(false) }
     var currentSetSound by remember { mutableStateOf(SetCompleteAudioHelper.getSelectedSound(context)) }
+    var selectedArticle by remember { mutableStateOf<ScienceArticle?>(null) }
+    var showAchievementsModal by remember { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
 
@@ -115,33 +124,83 @@ fun ProfileTab(viewModel: ApexViewModel) {
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "З нами з жовтня 2026",
-                                fontSize = 13.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Рівень ${gamificationState.level} · ${gamificationState.currentXp} XP",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = IceCyanPrimary
+                                )
+                            }
+                            if (readScienceArticleIds.size >= 6) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = Color(0xFFF59E0B).copy(alpha = 0.15f),
+                                    border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.5f)),
+                                    modifier = Modifier
+                                        .clickable { showAchievementsModal = true }
+                                        .testTag("science_master_profile_badge")
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                    ) {
+                                        Text(
+                                            text = "🎓 Знавець теорії",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFFF59E0B)
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
 
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.background,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clickable {
-                                nicknameInput = userNickname
-                                showEditNicknameDialog = true
-                            }
-                            .testTag("open_edit_nickname_btn")
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.Edit,
-                                contentDescription = "Редагувати ім'я",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(18.dp)
-                            )
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.background,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clickable { showAchievementsModal = true }
+                                .testTag("open_achievements_btn")
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.EmojiEvents,
+                                    contentDescription = "Досягнення",
+                                    tint = WarningAmber,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.background,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clickable {
+                                    nicknameInput = userNickname
+                                    showEditNicknameDialog = true
+                                }
+                                .testTag("open_edit_nickname_btn")
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Редагувати ім'я",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -274,6 +333,191 @@ fun ProfileTab(viewModel: ApexViewModel) {
                                 tint = TextMutedDark,
                                 modifier = Modifier.size(20.dp)
                             )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Section: НАУКОВА БАЗА ЗНАНЬ
+        item(key = "section_science_knowledge_base") {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "НАУКОВА БАЗА ЗНАНЬ",
+                        style = ApexSectionLabel,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (readScienceArticleIds.size >= 6) Color(0xFFF59E0B).copy(alpha = 0.15f) else IceCyanContainer,
+                        border = BorderStroke(1.dp, if (readScienceArticleIds.size >= 6) Color(0xFFF59E0B).copy(alpha = 0.5f) else IceCyanContainerBorder)
+                    ) {
+                        Text(
+                            text = if (readScienceArticleIds.size >= 6) "🎓 6/6 · Знавець теорії" else "🎓 ${readScienceArticleIds.size}/6 вивчено",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (readScienceArticleIds.size >= 6) Color(0xFFF59E0B) else IceCyanPrimary,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+                }
+
+                if (readScienceArticleIds.size >= 6) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF59E0B).copy(alpha = 0.12f)),
+                        border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.4f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showAchievementsModal = true }
+                            .testTag("science_master_banner")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(text = "🎓", fontSize = 28.sp)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Бейдж «Знавець теорії» здобуто!",
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 14.sp,
+                                    color = Color(0xFFF59E0B)
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "Ви вивчили всі 6 наукових принципів (+300 XP бонус та особливий статус).",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Card(
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("science_articles_card")
+                ) {
+                    Column {
+                        ScienceKnowledgeBase.articles.forEachIndexed { index, article ->
+                            val isArticleRead = readScienceArticleIds.contains(article.id)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { selectedArticle = article }
+                                    .heightIn(min = 68.dp)
+                                    .padding(horizontal = 14.dp, vertical = 12.dp)
+                                    .testTag("open_article_${article.id}"),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    val iconVector = when (article.iconName) {
+                                        "TrendingUp" -> Icons.Default.TrendingUp
+                                        "Speed" -> Icons.Default.Speed
+                                        "HourglassBottom" -> Icons.Default.HourglassBottom
+                                        "Assessment" -> Icons.Default.Assessment
+                                        "BatteryChargingFull" -> Icons.Default.BatteryChargingFull
+                                        else -> Icons.Default.AutoMode
+                                    }
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = if (isArticleRead) Color(0xFF10B981).copy(alpha = 0.15f) else IceCyanContainer,
+                                        border = if (isArticleRead) BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.4f)) else null,
+                                        modifier = Modifier.size(36.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = if (isArticleRead) Icons.Default.Check else iconVector,
+                                                contentDescription = null,
+                                                tint = if (isArticleRead) Color(0xFF10B981) else IceCyanPrimary,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = article.titleUk,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = article.subtitleUk,
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    if (isArticleRead) {
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = Color(0xFF10B981).copy(alpha = 0.15f),
+                                            border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.35f))
+                                        ) {
+                                            Text(
+                                                text = "✓ Прочитано",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFF10B981),
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    } else {
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = MaterialTheme.colorScheme.surfaceVariant
+                                        ) {
+                                            Text(
+                                                text = "+50 XP",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                    Icon(
+                                        imageVector = Icons.Default.ChevronRight,
+                                        contentDescription = null,
+                                        tint = TextMutedDark,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+
+                            if (index < ScienceKnowledgeBase.articles.size - 1) {
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.outline,
+                                    modifier = Modifier.padding(start = 62.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -434,6 +678,7 @@ fun ProfileTab(viewModel: ApexViewModel) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .clickable { viewModel.toggleDarkMode() }
                             .heightIn(min = 64.dp)
                             .padding(horizontal = 14.dp, vertical = 12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -692,6 +937,26 @@ fun ProfileTab(viewModel: ApexViewModel) {
             onSelectExercise = { _, _, _ -> },
             onDeleteExercise = { ex -> viewModel.deleteExercise(ex.id) },
             onDismiss = { showManageExercisesModal = false }
+        )
+    }
+
+    if (selectedArticle != null) {
+        val article = selectedArticle!!
+        ScienceArticleModal(
+            article = article,
+            isRead = readScienceArticleIds.contains(article.id),
+            onMarkRead = {
+                viewModel.markScienceArticleRead(article.id)
+            },
+            onDismiss = { selectedArticle = null }
+        )
+    }
+
+    if (showAchievementsModal) {
+        AchievementsModal(
+            achievements = gamificationState.achievements,
+            totalXp = gamificationState.currentXp,
+            onDismiss = { showAchievementsModal = false }
         )
     }
 }

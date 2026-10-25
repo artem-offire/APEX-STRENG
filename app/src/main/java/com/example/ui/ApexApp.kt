@@ -1,14 +1,17 @@
 package com.example.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,9 +22,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.screens.*
+import com.example.ui.theme.IceCyanContainer
+import com.example.ui.theme.IceCyanContainerBorder
+import com.example.ui.theme.IceCyanPrimary
+import com.example.ui.theme.Unbounded
 import kotlinx.coroutines.launch
 
 enum class ApexTab(
@@ -39,8 +47,15 @@ fun ApexApp(viewModel: ApexViewModel) {
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { ApexTab.values().size })
     val coroutineScope = rememberCoroutineScope()
     val activeWorkoutSessionId by viewModel.activeWorkoutSessionId.collectAsState()
+    val isWorkoutMinimized by viewModel.isWorkoutMinimized.collectAsState()
+    val allSessions by viewModel.allSessions.collectAsState()
+    val elapsedSeconds by viewModel.activeWorkoutElapsedSeconds.collectAsState()
+    val isRestActive by viewModel.isRestActive.collectAsState()
+    val restSecondsLeft by viewModel.restSecondsLeft.collectAsState()
 
-    if (activeWorkoutSessionId != null) {
+    val activeSession = allSessions.find { it.id == activeWorkoutSessionId }
+
+    if (activeWorkoutSessionId != null && !isWorkoutMinimized) {
         ActiveWorkoutScreen(
             sessionId = activeWorkoutSessionId!!,
             viewModel = viewModel,
@@ -48,6 +63,9 @@ fun ApexApp(viewModel: ApexViewModel) {
                 coroutineScope.launch {
                     pagerState.scrollToPage(0)
                 }
+            },
+            onMinimize = {
+                viewModel.minimizeWorkout()
             }
         )
     } else {
@@ -63,6 +81,19 @@ fun ApexApp(viewModel: ApexViewModel) {
                             .fillMaxWidth()
                             .navigationBarsPadding()
                     ) {
+                        // Mini-player docked above bottom navigation bar
+                        if (activeWorkoutSessionId != null && isWorkoutMinimized) {
+                            WorkoutMiniPlayer(
+                                title = activeSession?.title ?: "Силове тренування",
+                                elapsedSeconds = elapsedSeconds,
+                                isRestActive = isRestActive,
+                                restSecondsLeft = restSecondsLeft,
+                                onClick = {
+                                    viewModel.expandWorkout()
+                                }
+                            )
+                        }
+
                         HorizontalDivider(
                             thickness = 1.dp,
                             color = MaterialTheme.colorScheme.outline
@@ -151,6 +182,104 @@ fun ApexApp(viewModel: ApexViewModel) {
                         )
                         ApexTab.PROFILE -> ProfileTab(viewModel = viewModel)
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun WorkoutMiniPlayer(
+    title: String,
+    elapsedSeconds: Long,
+    isRestActive: Boolean,
+    restSecondsLeft: Int,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        border = BorderStroke(1.dp, IceCyanContainerBorder),
+        shadowElevation = 8.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .testTag("workout_mini_player")
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Icon Pill
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(IceCyanContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.FitnessCenter,
+                    contentDescription = null,
+                    tint = IceCyanPrimary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // Title and Timer (Minimalist: only title and timer)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = title.ifBlank { "Активне тренування" },
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(if (isRestActive) IceCyanPrimary else Color(0xFF10B981))
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (isRestActive) {
+                            "Відпочинок: ${formatMinSec(restSecondsLeft)}"
+                        } else {
+                            formatDuration(elapsedSeconds)
+                        },
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = Unbounded,
+                        color = if (isRestActive) IceCyanPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // Expand Arrow Icon
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                modifier = Modifier.size(32.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowUp,
+                        contentDescription = "Розгорнути тренування",
+                        tint = IceCyanPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
         }

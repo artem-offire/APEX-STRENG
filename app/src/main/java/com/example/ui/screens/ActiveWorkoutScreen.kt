@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -62,8 +63,10 @@ import com.example.ui.theme.*
 fun ActiveWorkoutScreen(
     sessionId: Long,
     viewModel: ApexViewModel,
-    onFinishOrClose: () -> Unit
+    onFinishOrClose: () -> Unit,
+    onMinimize: () -> Unit = {}
 ) {
+    BackHandler { onMinimize() }
     val activeExercisesWithSets by viewModel.activeWorkoutExercisesWithSets.collectAsState()
     val elapsedSeconds by viewModel.activeWorkoutElapsedSeconds.collectAsState()
     val allSessions by viewModel.allSessions.collectAsState()
@@ -87,7 +90,6 @@ fun ActiveWorkoutScreen(
     var workoutTitleInput by remember { mutableStateOf("") }
     var showCancelConfirmDialog by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
-    var dismissedOverloadBanner by remember { mutableStateOf(false) }
 
     var editingExerciseItem by remember { mutableStateOf<WorkoutExerciseWithSets?>(null) }
     var editingExerciseNewName by remember { mutableStateOf("") }
@@ -97,6 +99,10 @@ fun ActiveWorkoutScreen(
 
     val allActiveSets = remember(activeExercisesWithSets) {
         activeExercisesWithSets.flatMap { it.sets }
+    }
+
+    val allWorkoutSetsCompleted = remember(allActiveSets) {
+        allActiveSets.isNotEmpty() && allActiveSets.all { it.isCompleted }
     }
 
     val liveTonnage = remember(allActiveSets) {
@@ -143,10 +149,26 @@ fun ActiveWorkoutScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 16.dp, end = 12.dp, top = 14.dp, bottom = 14.dp),
+                            .padding(start = 10.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        IconButton(
+                            onClick = onMinimize,
+                            modifier = Modifier
+                                .size(40.dp)
+                                .testTag("minimize_workout_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowDown,
+                                contentDescription = "Згорнути тренування",
+                                tint = IceCyanPrimary,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(4.dp))
+
                         // Left: Title + Pencil & Live Subtitle (● 12:48 · 1 з 3 підх. · 600 кг)
                         Column(
                             modifier = Modifier
@@ -333,35 +355,79 @@ fun ActiveWorkoutScreen(
             }
         },
         bottomBar = {
-            WorkoutRestTimerBar(
-                isRestActive = isRestActive,
-                secondsLeft = restSecondsLeft,
-                totalSeconds = restTotalSeconds,
-                preferredDuration = preferredRestDuration,
-                onSelectDuration = { secs ->
-                    viewModel.setPreferredRestDuration(secs)
-                    if (isRestActive) {
-                        viewModel.startRestTimer(secs)
+            if (allWorkoutSetsCompleted && !isRestActive) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    tonalElevation = 2.dp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("workout_all_completed_bar")
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 10.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                viewModel.finishWorkout(
+                                    sessionId = sessionId,
+                                    notes = ""
+                                )
+                                onFinishOrClose()
+                            },
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = IceCyanPrimary,
+                                contentColor = IceCyanOnPrimary
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp)
+                                .testTag("finish_workout_from_bar_btn")
+                        ) {
+                            Text(
+                                text = "Всі вправи виконано! Завершити 🎉",
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 15.sp
+                            )
+                        }
                     }
-                },
-                onStartRest = { viewModel.startRestTimer(preferredRestDuration) },
-                onAdd15s = {
-                    if (isRestActive) {
-                        viewModel.adjustRestTimer(15)
-                    } else {
-                        viewModel.setPreferredRestDuration(preferredRestDuration + 15)
-                    }
-                },
-                onMinus15s = {
-                    if (isRestActive) {
-                        viewModel.adjustRestTimer(-15)
-                    } else {
-                        viewModel.setPreferredRestDuration(preferredRestDuration - 15)
-                    }
-                },
-                onSkipRest = { viewModel.cancelRestTimer() },
-                isCompoundExercise = isCurrentCompound
-            )
+                }
+            } else {
+                WorkoutRestTimerBar(
+                    isRestActive = isRestActive,
+                    secondsLeft = restSecondsLeft,
+                    totalSeconds = restTotalSeconds,
+                    preferredDuration = preferredRestDuration,
+                    onSelectDuration = { secs ->
+                        viewModel.setPreferredRestDuration(secs)
+                        if (isRestActive) {
+                            viewModel.startRestTimer(secs)
+                        }
+                    },
+                    onStartRest = { viewModel.startRestTimer(preferredRestDuration) },
+                    onAdd15s = {
+                        if (isRestActive) {
+                            viewModel.adjustRestTimer(15)
+                            viewModel.setPreferredRestDuration(preferredRestDuration + 15)
+                        } else {
+                            viewModel.setPreferredRestDuration(preferredRestDuration + 15)
+                        }
+                    },
+                    onMinus15s = {
+                        if (isRestActive) {
+                            viewModel.adjustRestTimer(-15)
+                            viewModel.setPreferredRestDuration(preferredRestDuration - 15)
+                        } else {
+                            viewModel.setPreferredRestDuration(preferredRestDuration - 15)
+                        }
+                    },
+                    onSkipRest = { viewModel.cancelRestTimer() },
+                    isCompoundExercise = isCurrentCompound
+                )
+            }
         }
     ) { innerPadding ->
         LazyColumn(
@@ -381,14 +447,6 @@ fun ActiveWorkoutScreen(
                         title = firstReaction.title,
                         subtitle = firstReaction.body,
                         onDismiss = { viewModel.dismissStartReaction(firstReaction.ruleId) }
-                    )
-                }
-            } else if (!dismissedOverloadBanner && liveTonnage > 0.0) {
-                item(key = "live_volume_banner") {
-                    VolumeOverloadWarningBanner(
-                        title = "Обсяг +300% до середнього",
-                        subtitle = "${liveTonnage.toInt()} кг за 7 днів · Слідкуйте за відновленням",
-                        onDismiss = { dismissedOverloadBanner = true }
                     )
                 }
             }
@@ -1927,7 +1985,7 @@ private fun AddWorkoutExercisePickerDialog(
     }
 }
 
-private fun formatMinSec(totalSec: Int): String {
+fun formatMinSec(totalSec: Int): String {
     val mins = totalSec / 60
     val secs = totalSec % 60
     return String.format("%02d:%02d", mins, secs)

@@ -447,6 +447,7 @@ fun ProgramsTab(
             sessions = mesoSessions,
             weekPlans = activeWeekPlans,
             overloadLogs = overloadLogs,
+            onDeleteSession = { sessionId -> viewModel.deleteSession(sessionId) },
             onDismiss = { showStructureDialog = false }
         )
     }

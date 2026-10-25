@@ -46,6 +46,8 @@
             android:exported="false">
             <intent-filter>
                 <action android:name="com.example.apex.ACTION_MUSCLE_RECOVERED" />
+                <action android:name="com.example.apex.ACTION_MARK_READ" />
+                <action android:name="com.example.apex.ACTION_MARK_ALL_READ" />
             </intent-filter>
         </receiver>
 
