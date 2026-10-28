@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>ASICS Gel-Kahana 8 — Luxury</title>
+<style>
+  html,body{margin:0;background:#000;overflow:hidden}
+  #stage{position:relative;width:1280px;height:720px;overflow:hidden;background:#050506}
+  #light{position:absolute;inset:0;
+    background:
+      radial-gradient(ellipse 55% 60% at 50% 38%,rgba(201,169,106,.20),rgba(201,169,106,0) 70%),
+      radial-gradient(ellipse 90% 70% at 50% 110%,rgba(255,255,255,.05),rgba(0,0,0,0) 60%),
+      linear-gradient(#0a0a0c,#020203)}
+  #world{position:absolute;left:0;top:0;width:800px;height:800px;transform-origin:0 0;will-change:transform}
+  #pool{position:absolute;left:30px;top:575px;width:740px;height:70px;border-radius:50%;
+    background:radial-gradient(ellipse,rgba(214,184,126,.38),rgba(214,184,126,0) 68%);filter:blur(8px)}
+  #floor{position:absolute;left:-1600px;top:606px;width:4000px;height:1600px;
+    background:linear-gradient(rgba(30,28,26,.55),rgba(0,0,0,0) 40%)}
+  #shoe{position:absolute;left:0;top:0;width:800px;height:800px;display:block;
+    filter:drop-shadow(0 0 22px rgba(0,0,0,.65)) brightness(1.02) contrast(1.06)}
+  #refl{position:absolute;left:0;top:604px;width:800px;height:200px;overflow:hidden;opacity:.5;
+    -webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,.55),rgba(0,0,0,0) 75%);
+            mask-image:linear-gradient(to bottom,rgba(0,0,0,.55),rgba(0,0,0,0) 75%)}
+  #refl img{position:absolute;left:0;top:-196px;width:800px;height:800px;transform:scaleY(-1);filter:blur(1.4px)}
+  #dust{position:absolute;inset:0;pointer-events:none}
+  .bar{position:absolute;left:0;right:0;height:92px;background:#000;z-index:5}
+  #grad{position:absolute;left:0;right:0;bottom:92px;height:230px;z-index:5;pointer-events:none;background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.88))}
+  #bt{top:0}#bb{bottom:0}
+  .vig{position:absolute;inset:0;pointer-events:none;z-index:4;
+    background:radial-gradient(ellipse at center,rgba(0,0,0,0) 45%,rgba(0,0,0,.65) 100%)}
+  .line{position:absolute;left:0;right:0;bottom:128px;text-align:center;z-index:6;opacity:0;
+    font-family:'Cormorant Garamond','Playfair Display',Georgia,'Times New Roman',serif;
+    font-style:italic;font-weight:300;font-size:44px;letter-spacing:.04em;color:#f1e7d3;
+    text-shadow:0 2px 24px rgba(0,0,0,.8)}
+  #end{position:absolute;left:0;right:0;top:0;bottom:0;z-index:6;opacity:0;text-align:center;
+    display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:112px;
+    font-family:'Cormorant Garamond','Playfair Display',Georgia,'Times New Roman',serif;color:#f1e7d3}
+  #end .brand{font-family:'Helvetica Neue',Arial,sans-serif;font-weight:300;letter-spacing:.9em;
+    font-size:15px;color:#c9a96a;margin-right:-.9em}
+  #end .name{font-weight:300;font-size:60px;letter-spacing:.14em;margin:10px 0 8px;text-shadow:0 2px 30px rgba(0,0,0,.9)}
+  #end .rule{width:70px;height:1px;background:#c9a96a;margin:6px 0 12px}
+  #end .sub{font-family:'Helvetica Neue',Arial,sans-serif;font-weight:300;letter-spacing:.5em;font-size:13px;color:#d6c7a6;margin-right:-.5em}
+  #fade{position:absolute;inset:0;background:#000;z-index:9;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="light"></div>
+  <div id="world">
+    <div id="floor"></div>
+    <div id="pool"></div>
+    <div id="refl"><img src="shoe_cut.png" alt=""></div>
+    <img id="shoe" src="shoe_cut.png" alt="">
+  </div>
+  <canvas id="dust" width="1280" height="720"></canvas>
+  <div class="vig"></div>
+  <div id="grad"></div><div class="bar" id="bt"></div><div class="bar" id="bb"></div>
+  <div class="line" id="l1">Деякі речі не пояснюють.</div>
+  <div class="line" id="l2">Їх відчувають.</div>
+  <div class="line" id="l3">Хода, яку помічають.</div>
+  <div id="end"><div class="brand">ASICS</div><div class="name">GEL-KAHANA 8</div><div class="rule"></div><div class="sub">GORE-TEX EDITION</div></div>
+  <div id="fade"></div>
+</div>
+<script>
+const K=[
+ {t:0,   x:405,y:505,z:0.92},
+ {t:6.5, x:405,y:505,z:1.08},
+ {t:8,   x:300,y:440,z:1.9 },
+ {t:12,  x:470,y:440,z:2.15},
+ {t:14,  x:140,y:520,z:2.1 },
+ {t:17,  x:210,y:520,z:2.25},
+ {t:19.5,x:405,y:505,z:1.1},
+ {t:24,  x:405,y:505,z:1.05}
+];
+const TOTAL=24;
+const lines=[['l1',2.2,6.2],['l2',8.6,11.8],['l3',14.4,18]];
+const ss=u=>u*u*(3-2*u), clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function cam(t){let i=0;while(i<K.length-2&&t>K[i+1].t)i++;
+  const a=K[i],b=K[i+1],u=ss(clamp((t-a.t)/(b.t-a.t),0,1));
+  return{x:a.x+(b.x-a.x)*u,y:a.y+(b.y-a.y)*u,z:a.z+(b.z-a.z)*u};}
+const world=document.getElementById('world'),end=document.getElementById('end'),
+      fade=document.getElementById('fade'),shoe=document.getElementById('shoe'),
+      cv=document.getElementById('dust'),cx=cv.getContext('2d');
+const P=Array.from({length:70},(_,i)=>{const r=n=>{const s=Math.sin(i*127.1+n*311.7)*43758.5453;return s-Math.floor(s)};
+  return{x:r(1)*1280,y:r(2)*720,s:.6+r(3)*1.8,v:6+r(4)*14,d:r(5)*6.28,a:.15+r(6)*.45}});
+let start=null;
+function frame(now){
+  if(start===null)start=now;
+  const t=(now-start)/1000;
+  const c=cam(t), sway=Math.sin(t*.6)*.25;
+  world.style.transform=`translate(${640-c.x*c.z+Math.sin(t*.5)*4}px,${350-c.y*c.z}px) scale(${c.z}) rotate(${sway*.15}deg)`;
+  // м'яке «дихання» світла по кросівку
+  const g=.96+.08*Math.sin(t*.8)+.06*ss(clamp((t-6)/3,0,1))*Math.sin((t-6)*1.4);
+  shoe.style.filter=`drop-shadow(0 0 22px rgba(0,0,0,.65)) brightness(${g}) contrast(1.08)`;
+  // пил у світлі
+  cx.clearRect(0,0,1280,720);
+  P.forEach(p=>{const x=(p.x+Math.sin(t*.3+p.d)*30+t*p.v*.4)%1280,y=((p.y-t*p.v)%720+720)%720;
+    cx.globalAlpha=p.a*(.5+.5*Math.sin(t*1.2+p.d));cx.fillStyle='#e8d5a8';
+    cx.beginPath();cx.arc(x,y,p.s,0,6.283);cx.fill();});
+  lines.forEach(([id,a,b])=>{const e=document.getElementById(id);
+    const o=ss(clamp((t-a)/1.2,0,1))*(1-ss(clamp((t-(b-1.2))/1.2,0,1)));
+    e.style.opacity=o;e.style.transform=`translateY(${(1-o)*10}px)`;
+    e.style.letterSpacing=(.04+(1-o)*.04)+'em';});
+  end.style.opacity=ss(clamp((t-19.8)/1.6,0,1));
+  fade.style.opacity=(1-ss(clamp(t/1.6,0,1)))+ss(clamp((t-(TOTAL-1.4))/1.4,0,1));
+  window.__t=t;
+  if(t<TOTAL+0.2)requestAnimationFrame(frame);else window.__done=true;
+}
+const im=new Image();im.onload=()=>requestAnimationFrame(frame);im.src='shoe_cut.png';
+</script>
+</body>
+</html>
