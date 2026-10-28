@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>ASICS Gel-Kahana 8 GTX</title>
+<style>
+  html,body{margin:0;background:#0d0f12;overflow:hidden}
+  #stage{position:relative;width:1280px;height:720px;overflow:hidden;
+    background:radial-gradient(ellipse at 50% 40%,#f4f4f2 0%,#d9dadb 60%,#b9bcc0 100%)}
+  #world{position:absolute;left:0;top:0;width:800px;height:800px;transform-origin:0 0;will-change:transform;mix-blend-mode:multiply}
+  #shadow{position:absolute;left:60px;top:590px;width:700px;height:50px;border-radius:50%;
+    background:radial-gradient(ellipse,rgba(0,0,0,.38),rgba(0,0,0,0) 70%);filter:blur(6px)}
+  #shoe{position:absolute;left:0;top:0;width:800px;height:800px;display:block}
+  .vig{position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(ellipse at center,rgba(0,0,0,0) 55%,rgba(0,0,0,.28) 100%)}
+  #sweep{position:absolute;inset:0;pointer-events:none;mix-blend-mode:soft-light;
+    background:linear-gradient(105deg,rgba(255,255,255,0) 40%,rgba(255,255,255,.9) 50%,rgba(255,255,255,0) 60%);
+    width:60%;left:-60%}
+  .cap{position:absolute;left:64px;bottom:64px;font-family:'Helvetica Neue',Arial,sans-serif;color:#14181c;
+    opacity:0;transform:translateY(14px);transition:none}
+  .cap small{display:block;letter-spacing:.32em;font-size:14px;font-weight:600;color:#c4521c;margin-bottom:8px}
+  .cap b{display:block;font-size:44px;line-height:1.05;font-weight:800;letter-spacing:-.01em}
+  .cap span{display:block;margin-top:10px;font-size:18px;color:#3b434b;max-width:520px}
+  #title{position:absolute;left:0;right:0;top:56px;text-align:center;font-family:'Helvetica Neue',Arial,sans-serif;
+    color:#14181c;opacity:0}
+  #title small{letter-spacing:.5em;font-size:15px;font-weight:600;color:#c4521c}
+  #title h1{margin:8px 0 0;font-size:64px;font-weight:800;letter-spacing:-.02em}
+  #title p{margin:6px 0 0;font-size:20px;color:#3b434b;letter-spacing:.08em}
+  #fade{position:absolute;inset:0;background:#0d0f12;opacity:1;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="world"><div id="shadow"></div><img id="shoe" src="shoe.jpg" alt=""></div>
+  <div id="sweep"></div>
+  <div class="vig"></div>
+  <div id="title"><small>ASICS</small><h1>GEL-KAHANA 8 GTX</h1><p>GORE-TEX · TRAIL · GEL</p></div>
+  <div class="cap" id="c1"><small>01 · ЗАХИСТ</small><b>GORE-TEX</b><span>Мембрана, що не пропускає воду, але дозволяє стопі дихати.</span></div>
+  <div class="cap" id="c2"><small>02 · АМОРТИЗАЦІЯ</small><b>GEL у п'яті</b><span>М'яке гасіння ударів на кожному кроці.</span></div>
+  <div class="cap" id="c3"><small>03 · ФІКСАЦІЯ</small><b>Фірмові смуги</b><span>Каркас, що тримає стопу і шнурівку.</span></div>
+  <div class="cap" id="c4"><small>04 · ЗЧЕПЛЕННЯ</small><b>Агресивний протектор</b><span>Впевнений контакт на мокрій землі та камінні.</span></div>
+</div>
+<div id="fade" style="position:fixed;left:0;top:0;width:1280px;height:720px"></div>
+<script>
+// Камера: центр (в координатах фото 800x800) + масштаб
+const K=[
+ {t:0,   x:405,y:447,z:1.00},
+ {t:3,   x:405,y:447,z:1.30},
+ {t:5,   x:150,y:395,z:2.30},
+ {t:7.5, x:150,y:395,z:2.45},
+ {t:9,   x:80, y:540,z:2.30},
+ {t:11,  x:80, y:540,z:2.45},
+ {t:12.5,x:400,y:430,z:1.90},
+ {t:14,  x:400,y:430,z:2.00},
+ {t:15.5,x:430,y:590,z:2.20},
+ {t:17,  x:430,y:590,z:2.30},
+ {t:19,  x:405,y:447,z:1.28},
+ {t:23,  x:405,y:447,z:1.22}
+];
+const TOTAL=23;
+const caps=[['c1',4.2,8.2],['c2',8.4,11.6],['c3',11.8,14.6],['c4',14.8,17.6]];
+const ss=u=>u*u*(3-2*u);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function cam(t){
+  let i=0; while(i<K.length-2&&t>K[i+1].t)i++;
+  const a=K[i],b=K[i+1],u=ss(clamp((t-a.t)/(b.t-a.t),0,1));
+  return {x:a.x+(b.x-a.x)*u,y:a.y+(b.y-a.y)*u,z:a.z+(b.z-a.z)*u};
+}
+const world=document.getElementById('world'),sweep=document.getElementById('sweep'),
+      title=document.getElementById('title'),fade=document.getElementById('fade');
+let start=null;
+function frame(now){
+  if(start===null)start=now;
+  const t=(now-start)/1000;
+  const c=cam(t), s=Math.sin(t*0.9)*0.35; // легке «дихання» камери
+  world.style.transform=`translate(${640-c.x*c.z}px,${360-c.y*c.z}px) scale(${c.z}) rotate(${s*0.2}deg)`;
+  // блік світла проходить по кросівку
+  const sp=clamp((t-1.2)/2.6,0,1); sweep.style.transform=`translateX(${ss(sp)*260}%)`;
+  // підписи
+  caps.forEach(([id,a,b])=>{
+    const e=document.getElementById(id);
+    const o=ss(clamp((t-a)/0.6,0,1))*(1-ss(clamp((t-(b-0.6))/0.6,0,1)));
+    e.style.opacity=o; e.style.transform=`translateY(${(1-o)*14}px)`;
+  });
+  // титри на початку і в кінці
+  const ti=ss(clamp((t-0.8)/0.8,0,1))*(1-ss(clamp((t-3.6)/0.6,0,1)));
+  const to=ss(clamp((t-19)/0.8,0,1))*(1-ss(clamp((t-22.2)/0.7,0,1)));
+  title.style.opacity=Math.max(ti,to);
+  fade.style.opacity=1-ss(clamp(t/0.7,0,1)) + ss(clamp((t-(TOTAL-0.7))/0.7,0,1));
+  window.__t=t;
+  if(t<TOTAL+0.2)requestAnimationFrame(frame); else window.__done=true;
+}
+document.getElementById('shoe').addEventListener('load',()=>requestAnimationFrame(frame));
+if(document.getElementById('shoe').complete)requestAnimationFrame(frame);
+</script>
+</body>
+</html>
